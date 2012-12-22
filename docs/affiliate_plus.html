@@ -1,0 +1,130 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en">
+<head>
+  <meta http-equiv="content-type" content="text/html; charset=utf-8" />
+
+  <title>CrocodocEE</title>
+
+  <style type="text/css" media="screen,print">@import url("docs.css");</style>
+<META http-equiv=Content-Type content="text/html; charset=utf-8"></head>
+
+<body>
+<div><a name="top"></a></div>
+
+<div id="header">
+<table cellpadding="0" cellspacing="0" border="0" style="width:100%;"><tr>
+<td class="docheading" style="width:300px;"><h1 style="font-size: 18px; font-weight: bold;">intoEEtive.com</h1></td>
+<td class="searchbox">
+
+</td>
+</tr>
+</table>
+</div>
+
+
+<div id="navlinks">
+<a href="http://www.intoeetive.com/">intoEEtive.com</a> &gt;
+<a href="http://www.intoeetive.com/index.php/category/extending_ee">EE add-ons</a> &gt;
+<a href="http://www.intoeetive.com/index.php/comments/crocodocee">CrocodocEE</a>
+</div>
+
+
+<div id="content">
+
+	<h1>CrocodocEE</h1>
+
+	<p>This add-on will automatically send files (of selected types and in selected upload locations) that you upload in ExpressionEngine to <a href="http://crocodoc.com/" target="_blank">Crocodoc</a>.</p>
+
+ 	<ul>		
+        
+        <li><a href="#settings">Extension settings</a></li>
+        <li><a href="#tags">Template tags</a>
+            <ul>
+            <li><a href="#tags-url">Viewing URL</a></li>
+            <li><a href="#tags-thumb">Thumbnail</a></li>   
+			<li><a href="#tags-uuid">UUID</a></li>           
+            </ul>
+        </li>
+        <li><a href="#by">Listing people who bookmarked certain data</a></li>
+        
+	</ul>
+
+	<h2><a name="settings" href="#top">&uarr;</a>Extension settings</h2>
+
+<p>In order to have uploaded files automatically posted to your Crocodoc account, you'll need to enter API token, which you can find on <a href="https://crocodoc.com/dashboard/" target="_blank">Dashboard</a>.</p>
+<p>Select upload locations that will contain the files you want to be sent to Crocodoc. If none is selected, nothing is sent.</p>
+<p>You can also restrict Crocodoc upload to certain MIME types of files. Leaving the field blank would result in sending all files in checked directories (upload locations). Example setting: application/pdf, application/x-pdf, application/msword, application/vnd.ms-excel, application/vnd.ms-powerpoint</p>
+<p>Also provide server path and URL to directory where cached thumbnail files will be saved. The script will create directory if it does not exist.</p>
+
+	<h2><a name="tags" href="#top">&uarr;</a>Template tags</h2>
+
+<h3><a name="tags-url" href="#top">&uarr;</a>Viewing URL</h3>
+
+<code>
+{exp:crocodocee:url file="{assets:server_path}"}
+</code>
+<code>
+{exp:crocodocee:url file="{attachment}{file_id}{/attachment}"}
+</code>
+<p>Returns URL to converted document, intended to be used as 'src' parameter of iframe tag.</p>
+<p><strong>Parameters:</strong>
+<ul>
+<li><dfn>file</dfn> &mdash; file id OR file path on server. Required.</li>
+<li><dfn>editable="yes"</dfn> &mdash; Allows users to create annotations and comments while viewing the document</li>
+<li><dfn>user</dfn> &mdash; A user ID and name joined with a comma (e.g.: 1337,Peter). Required if editable is true </li>
+<li><dfn>filter</dfn> &mdash; Limits which users' annotations and comments are shown. ("all", "none", or a comma-separated list of user IDs)</li>
+<li><dfn>admin="yes"</dfn> &mdash; Allows the user to modify or delete any annotations and comments; including those belonging to other users.</li>
+<li><dfn>downloadable="yes"</dfn> &mdash; Allows the user to download the original document</li>
+<li><dfn>copyprotected="yes"</dfn> &mdash; Prevents document text selection</li>
+<li><dfn>demo="yes"</dfn> &mdash; Prevents document changes such as creating, editing, or deleting annotations from being persisted</li>
+<li><dfn>sidebar</dfn> &mdash; Sets whether the viewer sidebar (used for listing annotations) is included. ("none", "auto", "collapse", "visible")</li>
+</ul>
+</p>
+<p>Check <a href="https://crocodoc.com/docs/api/#session-create" target="_blank">this page</a> for more information about parameters.</p>
+
+
+<h3><a name="tags-thumb" href="#top">&uarr;</a>Thumbnail</h3>
+
+<code>
+{exp:crocodocee:thumb file="{assets:server_path}"}
+</code>
+<code>
+{exp:crocodocee:thumb file="{attachment}{file_id}{/attachment}"}
+</code>
+<p>Returns URL of thumbnail of converted document (saved as png image in folder you specified in settings). The thumbnail is cached forever, so if for some reason you want to regenerate it, you'll need to delete locally hosted image.</p>
+<p><strong>Parameters:</strong>
+<ul>
+<li><dfn>size</dfn> &mdash; Maximum dimensions of the thumbnail in the format {width}x{height}. Largest dimensions allowed are 300x300. Default: 100x100</li>
+</ul>
+</p>
+<p>Check <a href="https://crocodoc.com/docs/api/#session-create" target="_blank">this page</a> for more information about parameters.</p>
+
+
+<h3><a name="tags-uuid" href="#top">&uarr;</a>UUID</h3>
+
+<code>
+{exp:crocodocee:uuid file="{assets:server_path}"}
+</code>
+<code>
+{exp:crocodocee:uuid file="{attachment}{file_id}{/attachment}"}
+</code>
+<p>Returns only UUID of converted document.</p>
+<p><strong>Parameters:</strong>
+<ul>
+<li><dfn>file</dfn> &mdash; file id OR file path on server. Required.</li>
+</ul>
+</p>
+
+</div>
+
+<p class="center"><a href="#top">Top of page</a></p>
+
+<!-- {user_guide_comments} -->
+
+<div id="footer">
+  <address>Copyright &copy; 2011 Yuri Salimovskiy <a href="http://www.intoeetive.com/">intoEEtive.com</a></address>
+</div>
+
+</body>
+</html>
