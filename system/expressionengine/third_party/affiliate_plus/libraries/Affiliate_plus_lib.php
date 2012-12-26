@@ -100,7 +100,20 @@ class Affiliate_plus_lib {
 				$hit_id = $this->EE->affiliate_plus_lib->update_hit_record($this->EE->session->userdata('member_id'));
 				if ($hit_id!=false)
 	    		{
-	    			$referrer_id = $this->EE->input->cookie('affiliate_plus_referrer_id');
+	    			$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
+		    				->from('affiliate_hits')
+		    				->where('hit_id', $hit_id)
+							->get();
+					if ($q->num_rows()==0)
+					{
+						return false;
+					}
+					else
+					{
+						$hit_id = $q->row('hit_id');
+						$hit_date = $q->row('hit_date');
+						$referrer_id = $q->row('referrer_id');
+					}
 	    		}
 	    		else
 	    		{
@@ -110,7 +123,7 @@ class Affiliate_plus_lib {
   			else
   			{
   				//check that we have a record that cookie points to
-  				$q = $this->EE->db->select('hit_id, member_id')
+  				$q = $this->EE->db->select('hit_id, hit_date, member_id')
 		    				->from('affiliate_hits')
 		    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
 							->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
@@ -122,13 +135,14 @@ class Affiliate_plus_lib {
 				else
 				{
 					$hit_id = $q->row('hit_id');
+					$hit_date = $q->row('hit_date');
 					$referrer_id = $this->EE->input->cookie('affiliate_plus_referrer_id');
 				}
   			}
     	}
     	else if ($this->EE->session->userdata('member_id')!=0)
     	{
-    		$q = $this->EE->db->select('referrer_id')
+    		$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
 	    				->from('affiliate_hits')
 	    				->where('member_id', $this->EE->session->userdata('member_id'))
 						->order_by('hit_id', 'asc')
@@ -141,12 +155,14 @@ class Affiliate_plus_lib {
 			else
 			{
 				$hit_id = $q->row('hit_id');
+				$hit_date = $q->row('hit_date');
 				$referrer_id = $q->row('referrer_id');
 			}
     	}	
 		
 		return array(
 			'hit_id'		=> 	$hit_id,
+			'hit_date'		=> 	$hit_date,
 			'referrer_id'	=>	$referrer_id
 		);
 		

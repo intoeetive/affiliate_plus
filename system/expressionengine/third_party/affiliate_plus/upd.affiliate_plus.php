@@ -61,6 +61,8 @@ class Affiliate_plus_upd {
 			'rule_title'						=> array('type' => 'VARCHAR',	'constraint'=> 150,	'default' => ''), 
 			
 			'rule_type'							=> array('type' => 'ENUM',		'constraint'=> "'open','restricted'",	'default' => 'open'),
+			
+			'rule_terminator'					=> array('type' => 'CHAR',		'constraint'=> 1,	'default' => 'n'),
 						
 			'rule_participant_members'						=> array('type' => 'TEXT',		'default' => ''),
 			'rule_participant_member_groups'				=> array('type' => 'TEXT',		'default' => ''),
@@ -147,6 +149,16 @@ class Affiliate_plus_upd {
 		$this->EE->dbforge->add_key('member_id');
 		$this->EE->dbforge->create_table('affiliate_payouts', TRUE);
 		
+        //notification templates
+        $data = array( 
+			'site_id' => $this->EE->config->item('site_id'), 
+			'enable_template' => 'y', 
+			'template_name' => 'affiliate_plus_withdraw_request_admin_notification', 
+			'data_title'=> $this->EE->lang->line('withdraw_request_admin_notification_subject'), 
+			'template_data'=> $this->EE->lang->line('withdraw_request_admin_notification_message') 
+		); 
+        $this->EE->db->insert('specialty_templates', $data); 
+        
         
         return TRUE; 
         
@@ -179,7 +191,29 @@ class Affiliate_plus_upd {
     
     function update($current='') 
 	{ 
-        return TRUE; 
+        $this->EE->load->dbforge(); 
+		
+		if ($current < 0.02)
+        {
+        	$data = array( 
+				'site_id' => $this->EE->config->item('site_id'), 
+				'enable_template' => 'y', 
+				'template_name' => 'affiliate_plus_withdraw_request_admin_notification', 
+				'data_title'=> $this->EE->lang->line('withdraw_request_admin_notification_subject'), 
+				'template_data'=> $this->EE->lang->line('withdraw_request_admin_notification_message') 
+			); 
+	        $this->EE->db->insert('specialty_templates', $data); 
+        }
+        
+        if ($current < 0.03)
+        {
+			if ($this->EE->db->field_exists('rule_terminator', 'affiliate_rules') == FALSE)
+			{
+				$this->EE->dbforge->add_column('affiliate_rules', array('rule_terminator' => array('type' => 'CHAR', 'constraint'=> 1, 'default' => 'n') ) );
+			}
+        }
+		
+		return TRUE; 
     } 
 	
 

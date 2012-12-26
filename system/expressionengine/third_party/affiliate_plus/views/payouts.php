@@ -13,6 +13,11 @@ if ($total_count == 0) {
 }
 else
 {
+	
+if ($masspay_button)
+{
+	echo '<p><strong><a href="'.BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=process_masspay_action'.'" class="masspay">'.lang('pay_with_masspay').'</a></strong></p>';
+}
 
 $this->table->set_template($cp_pad_table_template);
 $this->table->set_heading($table_headings);
@@ -25,8 +30,9 @@ foreach ($data as $item)
 
 echo $this->table->generate();
 
-
 $this->table->clear();
-
+?>
+<span class="pagination"><?=$pagination?></span>
+<?php
 }
 ?>

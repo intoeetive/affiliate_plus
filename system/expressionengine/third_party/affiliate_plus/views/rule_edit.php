@@ -19,7 +19,9 @@ foreach ($arr as $key => $val)
 {
 	if ($key!='show')
 	{
-		$this->table->add_row(lang($key, $key), $val);
+		$this->table->add_row(
+			array('data' => lang($key, $key), 'style' => 'width:50%;'), $val
+		);
 	}
 }
 echo $this->table->generate();

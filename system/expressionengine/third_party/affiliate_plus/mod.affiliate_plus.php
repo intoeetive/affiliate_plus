@@ -73,23 +73,36 @@ class Affiliate_plus {
         }
 		switch ($this->EE->input->get_post('system'))
         {
-		case 'cartthrob':
-		default:
-			$this->EE->load->add_package_path(PATH_THIRD.'cartthrob/');
-			$this->EE->load->model('cartthrob_settings_model');
-			$cartthrob_config = $this->EE->cartthrob_settings_model->get_settings();
-			$this->EE->load->remove_package_path(PATH_THIRD.'cartthrob/');
-			
-	        $this->EE->db->select('entry_id, title');
-	        $this->EE->db->from('channel_titles');
-	        $this->EE->db->where_in('channel_id', $cartthrob_config['product_channels']);
-	        $this->EE->db->where('title LIKE "%'.$str.'%"');
-	        $q = $this->EE->db->get();
-	        foreach ($q->result_array() as $row)
-	        {
-	            $out .= $row['entry_id']."=".$row['title']."\n";
-	        }
-	        break;
+			case 'simplecommerce':				
+		        $this->EE->db->select('simple_commerce_items.entry_id, title');
+		        $this->EE->db->from('simple_commerce_items');
+		        $this->EE->db->join('channel_titles', 'simple_commerce_items.entry_id=channel_titles.entry_id', 'left');
+		        $this->EE->db->where('item_enabled', 'y');
+		        $this->EE->db->where('title LIKE "%'.$str.'%"');
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $out .= $row['entry_id']."=".$row['title']."\n";
+		        }
+		        break;
+		        
+			case 'cartthrob':
+			default:
+				$this->EE->load->add_package_path(PATH_THIRD.'cartthrob/');
+				$this->EE->load->model('cartthrob_settings_model');
+				$cartthrob_config = $this->EE->cartthrob_settings_model->get_settings();
+				$this->EE->load->remove_package_path(PATH_THIRD.'cartthrob/');
+				
+		        $this->EE->db->select('entry_id, title');
+		        $this->EE->db->from('channel_titles');
+		        $this->EE->db->where_in('channel_id', $cartthrob_config['product_channels']);
+		        $this->EE->db->where('title LIKE "%'.$str.'%"');
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $out .= $row['entry_id']."=".$row['title']."\n";
+		        }
+		        break;
    		}
    		echo trim($out);
      	exit();
@@ -210,6 +223,16 @@ class Affiliate_plus {
 			$this->EE->output->show_user_error('general', lang('please_provide_amount_to_withdraw'));
 		}
 		
+		if ($this->EE->session->userdata('member_id')==0)
+		{
+			$this->EE->output->show_user_error('general', lang('please_log_in'));
+		}
+		
+		if ($this->EE->security->secure_forms_check($this->EE->input->post('XID')) == FALSE)
+		{
+			$this->EE->output->show_user_error('submission', lang('security_check_failed'));
+		}
+		
 		$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
 		if ($this->EE->input->post('amount') < $ext_settings['withdraw_minimum'])
 		{
@@ -262,6 +285,35 @@ class Affiliate_plus {
 		);
 		$this->EE->db->insert('affiliate_commissions', $insert);
 		
+		//notify site admin
+		$this->EE->load->library('email');
+        $this->EE->load->helper('string');
+        $this->EE->load->helper('text');
+        
+        $swap = array(
+			'site_name'	=> $this->EE->config->item('site_name'),
+			'site_url'	=> $this->EE->config->item('site_url'),
+			'amount'	=> $this->EE->input->post('amount'),
+			'member_id'	=> $this->EE->session->userdata('member_id'),
+			'username'	=> $this->EE->session->userdata('username'),
+			'screen_name'	=> $this->EE->session->userdata('screen_name'),
+			'cp_link'	=> BASE.'C=addons_modules&M=show_module_cp&module=affiliate_plus&method=payouts'
+		);
+		$template = $this->EE->functions->fetch_email_template('affiliate_plus_withdraw_request_admin_notification');
+		$email_tit = $this->EE->functions->var_swap($template['title'], $swap);
+		$email_msg = $this->EE->functions->var_swap($template['data'], $swap);
+        
+        
+        $this->EE->email->initialize();
+		$this->EE->email->wordwrap = false;
+		$this->EE->email->from($this->EE->config->item('webmaster_email'), $this->EE->config->item('webmaster_name'));
+		$this->EE->email->to($this->EE->config->item('webmaster_email')); 
+		$this->EE->email->subject($email_tit);	
+		$this->EE->email->message(entities_to_ascii($email_msg));		
+		$this->EE->email->Send();
+		
+		
+		//redirect
 		if ($this->EE->input->post('skip_success_message')=='y')
         {
         	$this->EE->functions->redirect($_POST['RET']);
@@ -368,6 +420,11 @@ class Affiliate_plus {
 	
 	function balance()
 	{
+		if ($this->EE->session->userdata('member_id')==0)
+		{
+			return $this->EE->TMPL->no_results();
+		}
+		
 		$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
 		
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
@@ -425,17 +482,13 @@ class Affiliate_plus {
        
         switch ($ext_settings['ecommerce_solution'])
         {
-        	case 'cartthrob':
+   			case 'simplecommerce':
+			case 'cartthrob':
         	default:
-        		$this->EE->load->add_package_path(PATH_THIRD.'cartthrob/');
-				$this->EE->load->model('cartthrob_settings_model');
-				$cartthrob_config = $this->EE->cartthrob_settings_model->get_settings();
-				$this->EE->load->remove_package_path(PATH_THIRD.'cartthrob/');
-        		$this->EE->db->select('affiliate_commissions.*, referrals.screen_name AS referral_screen_name, title AS order_title')
+        		$this->EE->db->select('affiliate_commissions.*, referrals.member_id AS referral_member_id, referrals.username AS referral_username, referrals.screen_name AS referral_screen_name')
         			->from('affiliate_commissions')
         			->where('affiliate_commissions.member_id', $this->EE->session->userdata('member_id'))
-					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left')
-        			->join('channel_titles', 'affiliate_commissions.order_id=channel_titles.entry_id', 'left');
+					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left');
         		break;
         }
 		
@@ -457,18 +510,11 @@ class Affiliate_plus {
             $tagdata = str_replace($tmp[0][0], '', $tagdata);
         }
         
-		   
-		$i = 0;
         foreach ($query->result_array() as $row)
         {
-           $vars['data'][$i]['date'] = $this->EE->localize->decode_date($date_format, $row['record_date']);
-           $vars['data'][$i]['affiliate'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['referrer_screen_name']."</a>";   
-           $vars['data'][$i]['order'] = "<a href=\"".BASE.AMP.'C=content_publish'.AMP.'M=entry_form'.AMP.'entry_id='.$row['order_id']."\">".$row['order_title']."</a>";   
-           $vars['data'][$i]['customer'] = ($row['referral_id']!=0)?"<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['referral_id']."\">".$row['referral_screen_name']."</a>":lang('guest');  
-           $vars['data'][$i]['commission'] = $row['credits']; 
-           $vars['data'][$i]['other1'] = '';    
+           $row['commission'] = $row['credits']; 
+           $row['method'] = $this->EE->lang->line($row['credits']); 
            $vars[] = $row;
- 			
         }
         
         $tagdata = $this->EE->TMPL->parse_variables($tagdata, $vars);

@@ -7,6 +7,7 @@ if ($total_count == 0) {
 	?>
 	<div class="tableFooter">
 		<p class="notice"><?=lang('no_records')?></p>
+		<p><a href="<?=BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=rule_edit'?>"><?=lang('create_rule')?></a></p>
 	</div>
 <?php 
 
@@ -27,7 +28,7 @@ $this->table->set_heading(
 
 foreach ($data as $item)
 {
-	$this->table->add_row($item['rule_id'], $item['rule_title'] , $item['commission_rate'], $item['rule_priority'], $item['edit'], $item['stats']);
+	$this->table->add_row($item['rule_id'], $item['rule_title'] , $item['commission_rate'], $item['rule_priority'], $item['edit']);//, $item['stats']);
 }
 
 echo $this->table->generate();
