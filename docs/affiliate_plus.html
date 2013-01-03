@@ -34,7 +34,9 @@
 
 	<h1>Affiliate Plus</h1>
 
-	<p>Affiliate+ is a system that makes managing referrals in ExpressionEngine easy. Highly customizable commission rules, stats, balance/withdraw system and DevDemon Credits integration. Integrates with CartThrob and SimpleCommerce e-commerce modules. Simply saying, it's a referrals system that works well</p>
+	<p>Affiliate+ is a system that makes managing referrals in ExpressionEngine easy. Highly customizable commission rules, stats, balance/withdraw system and DevDemon Credits integration. Integrates with CartThrob, Store and SimpleCommerce e-commerce modules. Simply saying, it's a referrals system that works well</p>
+	
+
 
  	<ul>		
         
@@ -53,7 +55,10 @@
             <li><a href="#tags-link">Affiliate link</a></li>
             <li><a href="#tags-balance">Balance</a></li>   
 			<li><a href="#tags-stats">Stats</a></li>   
+			
+			<li><a href="#tags-payouts">Withdraw history</a></li>
 			<li><a href="#tags-withdraw">Request withdraw</a></li>          
+			<li><a href="#tags-referrer">Referrer</a></li>          
             </ul>
         </li>
         
@@ -63,14 +68,24 @@
 
 <p>With Affiliate+, anyone can be an affiliate. That means that anyone can generate an affiliate link (though not every link will result in commission, taking advantage of flexible commission rules explained below).</p>
 
+<p>The referral commission is calculated separately for each item in the order (so you can set up the rules to include/exclude certain items).</p>
+
+<p>The referral commission for each rule is summed up.</p>
+
+<p>The link between affiliate and referral is established when affiliate link is clicked. The cookies need to be enabled in referral's browser. </p>
+
+<p>The referral record will not be made if user was registered before</p>
+
 	<h2><a name="settings" href="#top">&uarr;</a>Settings</h2>
 
 <p>Before proceeding, you need to save your settings. You will not be permitted to access rest of module's control panel before you do so.</p>
 <p>The main settings are:
 <br />
-E-commerce solution used on your site (currently CartThrob and SimpleCommerce are supported)<br />
+E-commerce solution used on your site (currently CartThrob, Store and SimpleCommerce are supported)<br />
 Minimum amount to withdraw (requests for smaller amounts will not be accepcted)<br />
-Integrate with DevDemon credits module (if set, every commission will also be recorded and credit and can then be used using Credits gateway)
+Integrate with DevDemon Credits module (if set, every commission will also be recorded and credit and can then be used using Credits gateway)<br />
+Mark rule as "terminator" (all other rules of lower priority will not be processed)<br />
+Discounts treatment (because comission is calculated per-product, dicount need to de divided between items in the order, and it can be done proportinally to number of products in the order or to their price)
 </p>
 <p>PayPal MassPay API credentials are only required if you indend to perform payouts automatically using MassPay.</p>
 
@@ -102,10 +117,14 @@ Integrate with DevDemon credits module (if set, every commission will also be re
 &mdash; the refferal record was made not too ling ago (time defined in seconds)
 </p>
 
+<p><strong>Example 1:</strong></p>
+<p>There are 2 rules: "All customers" (medium priority) giving affiliate 2% from every purchase, "Premium customers" rule (medium priority) giving 1% from purchases by members in "Premium customers" group (rule marked as terminator).</p>
+<p>The referred customer A, being not logged in, is byuing Product A for $100. The affiliate will get 2% = $2</p>
+<p>The referred customer B (in "Premium customers" group) is byuing same Product A with a discount for $90. The affiliate will get 1% = $0.90</p>
 
-<p><strong>Example:</strong></p>
-<p>There are 3 rules: "Default rule" (medium priority) giving affiliate 1% from every purchase, "Premium products" rule (medium priority) giving 3% from purchase for selected products and "Special offer" (high priority), marked as exclusive,giving $3 for products marked with "special offer" custom field.</p>
-<p>The referred customer A is byuing Product A for $100, which is noi in list of selected product, neither marked as special offer. The affiliate will get 1% = $1</p>
+<p><strong>Example 2:</strong></p>
+<p>There are 3 rules: "Default rule" (medium priority) giving affiliate 1% from every purchase, "Premium products" rule (medium priority) giving 3% from purchase for selected products and "Special offer" (high priority), marked as terminator, giving $3 for products marked with "special offer" custom field.</p>
+<p>The referred customer A is byuing Product A for $100, which is not in list of selected product, neither marked as special offer. The affiliate will get 1% = $1</p>
 <p>The referred customer B is byuing Product B for $100, which IS in list of selected product, but not marked as special offer. The affiliate will get 1%+3% = $4</p>
 <p>The referred customer C is byuing Product C for $100, which IS in list of selected product, and has "special offer" custom field set to "yes". The affiliate will get $3</p>
 
@@ -208,7 +227,7 @@ Integrate with DevDemon credits module (if set, every commission will also be re
 <li><dfn>total_commission_records</dfn> &mdash; total number of affiliate commissions recorded for user</li>
 
 <li><dfn>total_results</dfn> &mdash; total number of records on page</li>
-<li><dfn>count</dfn> &mdash; message counter on each page</li>
+<li><dfn>count</dfn> &mdash; rows counter on each page</li>
 
 <li><dfn>balance</dfn> &mdash; the user's affiliate balance</li>
 <li><dfn>withdraw_minimum</dfn> &mdash; withdrawal minimum set in settings</li>
@@ -231,9 +250,67 @@ Integrate with DevDemon credits module (if set, every commission will also be re
 </p>    
 
 
+
+<h3><a name="tags-payouts" href="#top">&uarr;</a>Withdraw history</h3>
+
+<p><strong>{exp:affiliate_plus:withdraw_history}</strong></p>
+
+<code>
+{exp:affiliate_plus:withdraw_history limit="20" paginate="bottom"}<br />
+&lt;p&gt;{count}. ${if amount}{amount}{if:else}{amount_pending}{/if}, requested on {request_date format="%Y-%m-%d"} and {status}{if status=='Processed'} on {payment_date format="%Y-%m-%d"}{/if}&lt;/p&gt;<br />
+{paginate}{pagination_links}{/paginate}<br />
+{/exp:affiliate_plus:withdraw_history}<br />
+</code>
+
+
+<p>Displays history of Affiliate+ payouts to logged in user.</p>
+
+
+<p><strong>Tag parameters (all optional):</strong>
+<ul>
+<li><dfn>limit</dfn> &mdash; number of records per page, if you want to use pagination</li>
+<li><dfn>paginate</dfn> &mdash; place to display pagination links. Can be 'top', 'bottom' or 'both'. Defaults to 'bottom'</li>
+</ul>
+</p>
+
+<p><strong>Conditional variables:</strong>
+<ul>
+<li><dfn>{if no_results}{/if}</dfn> &mdash; displayed if there are no commissions recorded</li>
+
+</ul>
+</p>
+
+<p><strong>Variables:</strong>
+<ul>
+
+<li><dfn>total_withdraw_records</dfn> &mdash; total number of withdraw records</li>
+
+<li><dfn>total_results</dfn> &mdash; total number of records on page</li>
+<li><dfn>count</dfn> &mdash; message counter on each page</li>
+
+<li><dfn>balance</dfn> &mdash; the user's current affiliate balance</li>
+<li><dfn>withdraw_minimum</dfn> &mdash; withdrawal minimum set in settings</li>
+
+<li><dfn>payout_id</dfn> &mdash; internal ID of payout record</li>
+<li><dfn>status</dfn> &mdash; Processed, Pending or Cancelled</li>
+<li><dfn>method</dfn> &mdash; withdraw method used (PayPal, Bank etc.)</li>
+<li><dfn>amount</dfn> &mdash; amount paid</li>
+<li><dfn>amount_pending</dfn> &mdash; requested amount, if withdraw is pending or cancelled</li>
+<li><dfn>transaction_id</dfn> &mdash; system (e.g. PayPal) transaction ID</li>
+<li><dfn>comment</dfn> &mdash; comment added to transaction by admin</li>
+<li><dfn>request_date format="%Y-%m-%d"</dfn> &mdash; date when withdraw was requested. Standard EE date formatting rules apply.</li>
+<li><dfn>payment_date format="%Y-%m-%d"</dfn> &mdash; date when payment was made. Standard EE date formatting rules apply.</li>
+
+<li><dfn>{paginate}{pagination_links}{/paginate}</dfn> &mdash; pagination links (if you have limit parameter set and there's more than one page)</li>
+</ul>
+</p>    
+
+
+
 <h3><a name="tags-withdraw" href="#top">&uarr;</a>Request withdraw</h3>
 
 <p><strong>{exp:affiliate_plus:withdraw_request_form}</strong></p>
+
 
 <code>
 {exp:affiliate_plus:withdraw_request_form return="SAME_PAGE"}<br />
@@ -265,6 +342,41 @@ Integrate with DevDemon credits module (if set, every commission will also be re
 <li><dfn>name</dfn> &mdash; form name (defaults to 'affiliate_plus_form')</li>
 </ul>
 </p>
+
+
+
+<h3><a name="tags-referrer" href="#top">&uarr;</a>Referrer</h3>
+
+
+<p>Get information about who referred certain user.</p>
+
+<p><strong>{exp:affiliate_plus:referrer}</strong></p>
+
+<code>
+{exp:affiliate_plus:referrer username="{segment_3}"}<br />
+&lt;p&gt;Referred by &lt;a href="{path={affiliate_username}}"&gt;{affiliate_screen_name}&lt;/a&gt;&lt;/p&gt;<br />
+{if no_results}No referral record{/if}<br />
+{/exp:affiliate_plus:referrer}<br />
+</code>
+
+
+<p><strong>Variables:</strong>
+<ul>
+<li><dfn>affiliate_member_id</dfn> &mdash; member ID of affiliate who referred this user</li>
+<li><dfn>affiliate_username</dfn> &mdash; username of affiliate who referred this user</li>
+<li><dfn>affiliate_screen_name</dfn> &mdash; screen name of affiliate who referred this user</li>
+</ul>
+</p>
+
+<p><strong>Parameters:</strong>
+<ul>
+<li><dfn>member_id</dfn> &mdash; member ID of referred member</li>
+<li><dfn>username</dfn> &mdash; username of referred member</li>
+</ul>
+</p>
+<p>If both username and member_id are omited, will display info related to logged in user.</p>
+
+
 
 
 </div>

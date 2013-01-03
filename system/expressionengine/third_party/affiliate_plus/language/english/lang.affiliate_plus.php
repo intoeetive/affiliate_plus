@@ -38,7 +38,7 @@ $lang = array(
 "simplecommerce" =>
 "Simple Commerce",
 
-"expressostore" =>
+"store" =>
 "Exp:resso Store",
 
 "filter_by_title" =>
@@ -146,6 +146,9 @@ $lang = array(
 "confirm_cancel_payout" =>
 "Are you sure you want to CANCEL this payout request?",
 
+"confirm_process_payout" =>
+"Are you sure you want to PROCESS this payout request?",
+
 "request_cancelled" =>
 "The request has been cancelled",
 
@@ -163,6 +166,9 @@ $lang = array(
 
 "rule_priority" =>
 "Rule priority",
+
+"priority" =>
+"Priority",
 
 "rule_terminator" =>
 "Is the rule a \"terminator\"? (makes rules of lower priority unapplicable)",
@@ -323,10 +329,10 @@ Log in to your Control Panel to process the payout.
 "PayPal MassPay mode",
 
 "dates_from" =>
-"Filter by date: from",
+"Dates from",
 
 "_to" =>
-"to",
+" to",
 
 "notification_templates" =>
 "Notification templates",
@@ -339,6 +345,27 @@ Log in to your Control Panel to process the payout.
 
 "template_data" =>
 "Message",
+
+"success" =>
+"Success",
+
+"payout_failed_unsufficient_balance" =>
+"The payout was not completed: user's balance is unsufficient",
+
+"masspay_failed" =>
+"MassPay has failed",
+
+'discount_processing' =>
+'Discounts processing',
+
+'dividebyprice' =>
+'Divide discount between order items proportionally to the price',
+
+'dividebyqty' =>
+'Divide discount between order items proportionally to the quantity',
+
+'firstitem' =>
+'Subtract discount from the price of first item(s) only',
 
 /* END */
 ''=>''

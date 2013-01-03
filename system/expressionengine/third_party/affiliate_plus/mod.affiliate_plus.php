@@ -36,6 +36,8 @@ class Affiliate_plus {
     function __construct()
     {        
     	$this->EE =& get_instance(); 
+    	
+    	$this->EE->load->library('affiliate_plus_lib');  
 
 		$this->EE->lang->loadfile('affiliate_plus');  
     }
@@ -78,6 +80,18 @@ class Affiliate_plus {
 		        $this->EE->db->from('simple_commerce_items');
 		        $this->EE->db->join('channel_titles', 'simple_commerce_items.entry_id=channel_titles.entry_id', 'left');
 		        $this->EE->db->where('item_enabled', 'y');
+		        $this->EE->db->where('title LIKE "%'.$str.'%"');
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $out .= $row['entry_id']."=".$row['title']."\n";
+		        }
+		        break;
+		        
+   			case 'store':				
+		        $this->EE->db->select('store_products.entry_id, title');
+		        $this->EE->db->from('store_products');
+		        $this->EE->db->join('channel_titles', 'store_products.entry_id=channel_titles.entry_id', 'left');
 		        $this->EE->db->where('title LIKE "%'.$str.'%"');
 		        $q = $this->EE->db->get();
 		        foreach ($q->result_array() as $row)
@@ -130,7 +144,7 @@ class Affiliate_plus {
 		    }
 		    else
 		    {
-		        $return = $this->EE->functions->create_url($this->EE->TMPL->fetch_param('return'));
+		        $return = $this->EE->functions->create_url($this->EE->TMPL->parse_globals($this->EE->TMPL->fetch_param('return')));
 		    }
         }
         
@@ -186,18 +200,20 @@ class Affiliate_plus {
 		
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 		$amount_avail = 0;
 		if ($q->num_rows()>0)
 		{
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if ($ext_settings['devdemon_credits']=='y')
+		if (isset($ext_settings['devdemon_credits']) && $ext_settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 			if ($q->num_rows()>0)
 			{
 				if ($q->row('credits_total') < $amount_avail)
@@ -207,8 +223,8 @@ class Affiliate_plus {
 			}
 		}
 		
-		$tagdata = $this->EE->TMPL->swap_var_single('amount_min', $ext_settings['withdraw_minimum'], $tagdata);
-		$tagdata = $this->EE->TMPL->swap_var_single('amount', $amount_avail, $tagdata);
+		$tagdata = $this->EE->TMPL->swap_var_single('amount_min', (float)$ext_settings['withdraw_minimum'], $tagdata);
+		$tagdata = $this->EE->TMPL->swap_var_single('amount', (float)$amount_avail, $tagdata);
 		
         $out = $this->EE->functions->form_declaration($data).$tagdata."\n"."</form>";
         
@@ -234,13 +250,14 @@ class Affiliate_plus {
 		}
 		
 		$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
-		if ($this->EE->input->post('amount') < $ext_settings['withdraw_minimum'])
+		if ($ext_settings['withdraw_minimum']!='' && $this->EE->input->post('amount') < $ext_settings['withdraw_minimum'])
 		{
 			$this->EE->output->show_user_error('general', lang('requested_amount_less_minimum'));
 		}
 		
 		$q = $this->EE->db->select('commission_id')
 				->from('affiliate_commissions')
+				->where('member_id', $this->EE->session->userdata('member_id'))
 				->where('method', 'withdraw')
 				->where('order_id', '0')
 				->get();
@@ -251,18 +268,20 @@ class Affiliate_plus {
         
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 		$amount_avail = 0;
 		if ($q->num_rows()>0)
 		{
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if ($this->settings['devdemon_credits']=='y')
+		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 			if ($q->num_rows()>0)
 			{
 				if ($q->row('credits_total') < $amount_avail)
@@ -297,7 +316,7 @@ class Affiliate_plus {
 			'member_id'	=> $this->EE->session->userdata('member_id'),
 			'username'	=> $this->EE->session->userdata('username'),
 			'screen_name'	=> $this->EE->session->userdata('screen_name'),
-			'cp_link'	=> BASE.'C=addons_modules&M=show_module_cp&module=affiliate_plus&method=payouts'
+			'cp_link'	=> $this->EE->config->item('cp_url').'?D=cp&C=addons_modules&M=show_module_cp&module=affiliate_plus&method=payouts'
 		);
 		$template = $this->EE->functions->fetch_email_template('affiliate_plus_withdraw_request_admin_notification');
 		$email_tit = $this->EE->functions->var_swap($template['title'], $swap);
@@ -324,7 +343,7 @@ class Affiliate_plus {
         				'heading'	=> lang('success'),
         				'content'	=> lang('withdraw_request_accepted'),
         				'redirect'	=> $_POST['RET'],
-        				'link'		=> array($_POST['RET'], $site_name),
+        				'link'		=> array($_POST['RET'], $swap['site_name']),
                         'rate'		=> 5
         			 );
 		
@@ -404,7 +423,7 @@ class Affiliate_plus {
     	$data = array(
 			'ip_address'		=> $this->EE->input->ip_address(),
 			'referrer_id'		=> $user_q->row('member_id'),
-			'referrer_server'	=> $_SERVER['HTTP_REFERER'],
+			'referrer_server'	=> (isset($_SERVER['HTTP_REFERER']))?$_SERVER['HTTP_REFERER']:'',
 			'hit_date'			=> $this->EE->localize->now
 		);
 		
@@ -429,18 +448,20 @@ class Affiliate_plus {
 		
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 		$amount_avail = 0;
 		if ($q->num_rows()>0)
 		{
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if ($ext_settings['devdemon_credits']=='y')
+		if (isset($ext_settings['devdemon_credits']) && $ext_settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
-					->where('member_id', $this->EE->session->userdata('member_id'));
+					->where('member_id', $this->EE->session->userdata('member_id'))
+					->get();
 			if ($q->num_rows()>0)
 			{
 				if ($q->row('credits_total') < $amount_avail)
@@ -450,9 +471,60 @@ class Affiliate_plus {
 			}
 		}
 		
-		return $amount_avail;
+		return (float)$amount_avail;
 		
 	}
+	
+	
+	
+	
+	function referrer()
+	{
+		$member_id = $this->EE->session->userdata('member_id');
+		
+		if ($this->EE->TMPL->fetch_param('member_id')!=false)
+		{
+			$member_id = $this->EE->TMPL->fetch_param('member_id');
+		}
+		if ($this->EE->TMPL->fetch_param('username')!=false)
+		{
+			$username = $this->EE->TMPL->fetch_param('username');
+		}
+		if ($member_id==0 && !isset($username))
+		{
+			return $this->EE->TMPL->no_results();
+		}
+
+		$this->EE->db->select('members.member_id AS affiliate_member_id, username AS affiliate_username, screen_name AS affiliate_screen_name')
+			->from('affiliate_hits')
+			->join('members', 'affiliate_hits.referrer_id=members.member_id', 'left');
+		if (!isset($username))
+		{
+			$this->EE->db->where('affiliate_hits.member_id', $member_id);
+			
+		}
+		else
+		{
+			$this->EE->db->join('members AS m2', 'affiliate_hits.member_id=m2.member_id', 'left');
+			$this->EE->db->where('m2.username', $username);
+		}
+		$this->EE->db->limit(1);
+		//echo $this->EE->db->_compile_select();
+		$q = $this->EE->db->get();
+		
+		if ($q->num_rows()==0)
+		{
+			return $this->EE->TMPL->no_results();
+		}
+		
+		$tagdata = $this->EE->TMPL->parse_variables_row($this->EE->TMPL->tagdata, $q->row_array());
+		
+		return $tagdata;
+		
+	}
+	
+	
+	
 	
 	
 	function stats()
@@ -483,11 +555,13 @@ class Affiliate_plus {
         switch ($ext_settings['ecommerce_solution'])
         {
    			case 'simplecommerce':
+   			case 'store':
 			case 'cartthrob':
         	default:
         		$this->EE->db->select('affiliate_commissions.*, referrals.member_id AS referral_member_id, referrals.username AS referral_username, referrals.screen_name AS referral_screen_name')
         			->from('affiliate_commissions')
         			->where('affiliate_commissions.member_id', $this->EE->session->userdata('member_id'))
+        			->where('affiliate_commissions.order_id != ', 0)
 					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left');
         		break;
         }
@@ -513,13 +587,13 @@ class Affiliate_plus {
         foreach ($query->result_array() as $row)
         {
            $row['commission'] = $row['credits']; 
-           $row['method'] = $this->EE->lang->line($row['credits']); 
+           $row['method'] = $this->EE->lang->line($row['method']); 
            $vars[] = $row;
         }
         
         $tagdata = $this->EE->TMPL->parse_variables($tagdata, $vars);
 
-		if (($start==0 && $perpage > $query->num_rows()))
+		if ($start==0 && $perpage > $query->num_rows())
 		{
         	$global_vars['total_commission_records'] = $query->num_rows();
  		}
@@ -528,7 +602,9 @@ class Affiliate_plus {
  			
   			$this->EE->db->select("COUNT('*') AS count")
   				->from('affiliate_commissions')
-				 ->where('member_id', $this->EE->session->userdata('member_id'));
+				 ->where('member_id', $this->EE->session->userdata('member_id'))
+				 ->where('order_id != ', 0)
+				 ->get();
 	        
 	        $q = $this->EE->db->get();
 	        
@@ -536,7 +612,7 @@ class Affiliate_plus {
  		}
  		
  		$global_vars['balance'] = $this->balance();
- 		$global_vars['withdraw_minimum'] = $ext_settings['withdraw_minimum'];
+ 		$global_vars['withdraw_minimum'] = (float)$ext_settings['withdraw_minimum'];
  		
  		
  		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $global_vars);
@@ -581,6 +657,168 @@ class Affiliate_plus {
 	
     }
 	
+	
+	
+	
+	function withdraw_history()
+	{
+        if ($this->EE->session->userdata('member_id')==0)
+        {
+        	return $this->EE->TMPL->no_results();
+        }
+		
+		$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
+        
+        $paginate = ($this->EE->TMPL->fetch_param('paginate')=='top')?'top':(($this->EE->TMPL->fetch_param('paginate')=='both')?'both':'bottom');
+        $perpage = ($this->EE->TMPL->fetch_param('limit')!='') ? $this->EE->TMPL->fetch_param('limit') : '25';
+        
+        $start = 0;
+        $basepath = $this->EE->functions->create_url($this->EE->uri->uri_string);
+        $query_string = ($this->EE->uri->page_query_string != '') ? $this->EE->uri->page_query_string : $this->EE->uri->query_string;
+
+		if (preg_match("#^P(\d+)|/P(\d+)#", $query_string, $match))
+		{
+			$start = (isset($match[2])) ? $match[2] : $match[1];
+			$basepath = $this->EE->functions->remove_double_slashes(str_replace($match[0], '', $basepath));
+		}
+
+    	$vars = array();
+    	$global_vars = array();
+       
+        switch ($ext_settings['ecommerce_solution'])
+        {
+   			case 'simplecommerce':
+   			case 'store':
+			case 'cartthrob':
+        	default:
+        		$this->EE->db->select('affiliate_commissions.order_id, affiliate_commissions.record_date AS request_date, affiliate_commissions.credits_pending AS amount_pending, affiliate_payouts.*')
+        			->from('affiliate_commissions')
+        			->where('affiliate_commissions.member_id', $this->EE->session->userdata('member_id'))
+        			->where('affiliate_commissions.method', 'withdraw')
+					->join('affiliate_payouts', 'affiliate_commissions.order_id=affiliate_payouts.payout_id', 'left');
+        		break;
+        }
+		
+		$this->EE->db->limit($perpage, $start);
+        $query = $this->EE->db->get();
+        
+        if ($query->num_rows()==0)
+        {
+            return $this->EE->TMPL->no_results();
+        }
+        
+        
+        $tagdata = $this->EE->TMPL->tagdata;
+        $paginate_tagdata = '';
+        
+        if ( preg_match_all("/".LD."paginate".RD."(.*?)".LD."\/paginate".RD."/s", $tagdata, $tmp)!=0)
+        {
+            $paginate_tagdata = $tmp[1][0];
+            $tagdata = str_replace($tmp[0][0], '', $tagdata);
+        }
+        
+        $this->EE->load->library('typography');
+        $this->EE->typography->initialize();
+        
+        foreach ($query->result_array() as $row)
+        {
+			switch ($row['order_id'])
+			{
+				case '0':
+				   	$row['status'] = lang('requested');
+				   	break;
+				case '-1':
+			   		$row['status'] = lang('cancelled');
+			   		break;
+				default:
+			   		$row['status'] = lang('processed');
+			   		break;
+			}
+			if (!isset($row['payout_id']) || $row['payout_id']=='')
+			{
+				$row['payout_id'] = '';
+				$row['method'] = '';
+				$row['amount'] = 0;
+				$row['transaction_id'] = '';
+				$row['comment'] = '';
+				$row['request_date'] = '';
+				$row['payment_date'] = '';
+			}
+			else
+			{
+				$row['comment'] = $this->EE->typography->parse_type($row['comment']); 
+	           	$row['method'] = $this->EE->lang->line($row['method']); 
+	           	$row['request_date'] = $row['record_date'];
+	           	$row['payment_date'] = $row['payout_date'];
+   			}
+           	$vars[] = $row;
+        }
+        
+        $tagdata = $this->EE->TMPL->parse_variables($tagdata, $vars);
+
+		if ($start==0 && $perpage > $query->num_rows())
+		{
+        	$global_vars['total_withdraw_records'] = $query->num_rows();
+ 		}
+ 		else
+ 		{
+ 			
+  			$this->EE->db->select("COUNT('*') AS count")
+				->from('affiliate_commissions')
+				 ->where('member_id', $this->EE->session->userdata('member_id'))
+				 ->where('method', 'withdraw')
+				 ->get();
+	        
+	        $q = $this->EE->db->get();
+	        
+	        $global_vars['total_withdraw_records']  = $q->row('count');
+ 		}
+ 		
+ 		$global_vars['balance'] = $this->balance();
+ 		$global_vars['withdraw_minimum'] = (float)$ext_settings['withdraw_minimum'];
+ 		
+ 		
+ 		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $global_vars);
+
+        if ($global_vars['total_withdraw_records'] > $perpage)
+        {
+            $this->EE->load->library('pagination');
+
+			$config['base_url']		= $basepath;
+			$config['prefix']		= 'P';
+			$config['total_rows'] 	= $global_vars['total_withdraw_records'];
+			$config['per_page']		= $perpage;
+			$config['cur_page']		= $start;
+			$config['first_link'] 	= $this->EE->lang->line('pag_first_link');
+			$config['last_link'] 	= $this->EE->lang->line('pag_last_link');
+
+			$this->EE->pagination->initialize($config);
+			$pagination_links = $this->EE->pagination->create_links();	
+            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', $pagination_links, $paginate_tagdata);			
+        }
+        else
+        {
+            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', '', $paginate_tagdata);		
+        }
+        
+        switch ($paginate)
+        {
+            case 'top':
+                $tagdata = $paginate_tagdata.$tagdata;
+                break;
+            case 'both':
+                $tagdata = $paginate_tagdata.$tagdata.$paginate_tagdata;
+                break;
+            case 'bottom':
+            default:
+                $tagdata = $tagdata.$paginate_tagdata;
+        }
+        
+        
+        return $tagdata;
+        
+	
+    }
 	
 	
 

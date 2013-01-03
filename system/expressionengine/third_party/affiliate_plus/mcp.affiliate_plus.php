@@ -128,6 +128,7 @@ class Affiliate_plus_mcp {
 			'rule_type'			=> 'open',
 			
 			'rule_terminator'	=> 'n',
+			'discount_processing'	=> 'dividebyprice',
 			
 			'rule_participant_members'	=> array(),
 			'rule_participant_member_groups'=> array(),
@@ -236,7 +237,7 @@ class Affiliate_plus_mcp {
 				
 				$this->EE->db->where('item_enabled', 'y');
 		        $total_products = $this->EE->db->count_all_results('simple_commerce_items');
-		       	if ($total_members > $this->multiselect_fetch_limit)
+		       	if ($total_products > $this->multiselect_fetch_limit)
 		        {
 		            $act = $this->EE->db->query("SELECT action_id FROM exp_actions WHERE class='Affiliate_plus' AND method='find_products'");
 		            $remoteUrl = trim($this->EE->config->item('site_url'), '/').'/?ACT='.$act->row('action_id').'&system=simplecommerce';
@@ -257,7 +258,7 @@ class Affiliate_plus_mcp {
 		        $this->EE->db->from('simple_commerce_items');
 		        $this->EE->db->join('channel_titles', 'simple_commerce_items.entry_id=channel_titles.entry_id', 'left');
 		        $this->EE->db->where('item_enabled', 'y');
-		        if ($total_members > $this->multiselect_fetch_limit)
+		        if ($total_products > $this->multiselect_fetch_limit)
 		        {
 		            $this->EE->db->limit($this->multiselect_fetch_limit);
 		        }
@@ -303,7 +304,85 @@ class Affiliate_plus_mcp {
 		        
 		        break;
 		        
+		    
+			
+			case 'store':
+				$product_groups_list_items = array();
+		        $this->EE->db->select('channels.channel_id, channel_title');
+		        $this->EE->db->distinct();
+		        $this->EE->db->from('store_products');
+				$this->EE->db->join('channel_titles', 'store_products.entry_id=channel_titles.entry_id', 'left');
+				$this->EE->db->join('channels', 'channel_titles.channel_id=channels.channel_id', 'left');
+		        $q = $this->EE->db->get();
+		        $product_channels = array();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $product_groups_list_items[$row['channel_id']] = $row['channel_title'];
+		            $product_channels[$row['channel_id']] = $row['channel_id'];
+		        }
+		        $js .= "
+		            $('#rule_product_groups').multiselect({ droppable: 'none', sortable: 'none' });
+		            ";
 		        
+		        $product_field_list_items = array();
+    			$product_field_list_items[''] = '';
+		        $this->EE->db->select('field_id, field_label');
+    			$this->EE->db->distinct();
+    			$this->EE->db->from('channels');
+		        $this->EE->db->join('channel_fields', 'channels.field_group=channel_fields.group_id', 'left');
+		        $this->EE->db->where_in('channel_id', $product_channels);
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $product_field_list_items[$row['field_id']] = $row['field_label'];
+		        }
+		        
+		        
+		        $total_products = $this->EE->db->count_all('store_products');
+		       	if ($total_products > $this->multiselect_fetch_limit)
+		        {
+		            $act = $this->EE->db->query("SELECT action_id FROM exp_actions WHERE class='Affiliate_plus' AND method='find_products'");
+		            $remoteUrl = trim($this->EE->config->item('site_url'), '/').'/?ACT='.$act->row('action_id').'&system=store';
+		            $js .= "
+		            $('#rule_product_ids').multiselect({ droppable: 'none', sortable: 'none', remoteUrl: '$remoteUrl' });
+		            ";
+		        }
+		        else
+		        {
+		            $js .= "
+		            $('#rule_product_ids').multiselect({ droppable: 'none', sortable: 'none' });
+		            ";
+		        }
+		        
+		        $product_ids_list_items = array();
+		        $this->EE->db->select('channel_titles.entry_id, title');
+		        $this->EE->db->from('store_products');
+				$this->EE->db->join('channel_titles', 'store_products.entry_id=channel_titles.entry_id', 'left');
+		        if ($total_products > $this->multiselect_fetch_limit)
+		        {
+		            $this->EE->db->limit($this->multiselect_fetch_limit);
+		        }
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $product_ids_list_items[$row['entry_id']] = $row['title'];
+		        }       
+				
+				$this->EE->load->add_package_path(PATH_THIRD.'store/');
+				$this->EE->load->model('store_payments_model');
+				$payment_methods = $this->EE->store_payments_model->find_all_payment_methods();
+				$this->EE->load->remove_package_path(PATH_THIRD.'store/');
+				
+				$gateways_list = array();
+				foreach ($payment_methods as $payment_method)
+				{
+					$gateways_list[$payment_method['name']] = $payment_method['title'];
+				}
+		        
+		        break;
+			
+			
+			    
 		        
     		case 'cartthrob':
     		default:
@@ -341,7 +420,7 @@ class Affiliate_plus_mcp {
 		        
 		        $this->EE->db->where_in('channel_id', $cartthrob_config['product_channels']);
 		        $total_products = $this->EE->db->count_all_results('channel_titles');
-		       	if ($total_members > $this->multiselect_fetch_limit)
+		       	if ($total_products > $this->multiselect_fetch_limit)
 		        {
 		            $act = $this->EE->db->query("SELECT action_id FROM exp_actions WHERE class='Affiliate_plus' AND method='find_products'");
 		            $remoteUrl = trim($this->EE->config->item('site_url'), '/').'/?ACT='.$act->row('action_id').'&system=cartthrob';
@@ -360,7 +439,7 @@ class Affiliate_plus_mcp {
 		        $this->EE->db->select('entry_id, title');
 		        $this->EE->db->from('channel_titles');
 		        $this->EE->db->where_in('channel_id', $cartthrob_config['product_channels']);
-		        if ($total_members > $this->multiselect_fetch_limit)
+		        if ($total_products > $this->multiselect_fetch_limit)
 		        {
 		            $this->EE->db->limit($this->multiselect_fetch_limit);
 		        }
@@ -407,6 +486,7 @@ class Affiliate_plus_mcp {
 		$data['main_data']['commission_rate'] = form_input('commission_rate', $values['commission_rate']);
 		$data['main_data']['rule_priority'] = form_dropdown('rule_priority', $priorities, $values['rule_priority']);
 		$data['main_data']['rule_terminator'] = form_checkbox('rule_terminator', 'y', ($values['rule_terminator']=='y')?true:false);
+		$data['main_data']['discount_processing'] = form_dropdown('discount_processing', array('dividebyprice' => lang('dividebyprice'), 'dividebyqty' => lang('dividebyqty')), $values['discount_processing']);
 		
 		$data['restrictions'] = array();
 		$data['restrictions']['show'] = ($values['rule_require_purchase']=='y' || $values['commission_aplied_maxamount']!=0 || $values['commission_aplied_maxpurchases']!=0 || $values['commission_aplied_maxtime']!=0 )?true:false;
@@ -534,6 +614,7 @@ class Affiliate_plus_mcp {
         $this->EE->load->library('javascript');
 
     	$vars = array();
+    	$js = '';
         
         $vars['selected']['rownum']=($this->EE->input->get_post('rownum')!='')?$this->EE->input->get_post('rownum'):0;
 
@@ -564,8 +645,8 @@ class Affiliate_plus_mcp {
 		$i = 0;
         foreach ($query->result_array() as $row)
         {
-           	$vars['data'][$i]['date'] = $this->EE->localize->decode_date($date_format, $row['payout_date']);
-           	$vars['data'][$i]['member'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['screen_name']."</a> (<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats'.AMP.'stats_type=member'.AMP.'id='.$row['member_id']."\">".lang('view_stats')."</a>)";
+           	$vars['data'][$i]['date'] = ($row['record_date']!='')?$this->EE->localize->decode_date($date_format, $row['record_date']):'';
+           	$vars['data'][$i]['member'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['screen_name']."</a> (".lang('balance')." ".$this->_balance($row['member_id'])." - <a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats'.AMP.'member_id='.$row['member_id']."\">".lang('view_stats')."</a>)";
            	$vars['data'][$i]['amount'] = ($row['credits']!=0)?(-$row['credits']):(-$row['credits_pending']);
            	switch ($row['order_id'])
            	{
@@ -583,7 +664,7 @@ class Affiliate_plus_mcp {
            	if ($row['order_id']==0)
            	{
            		//pending
-           		$vars['data'][$i]['link'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=process_payout'.AMP.'id='.$row['commission_id']."\">".lang('process_payout')."</a> | <a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=cancel_payout'.AMP.'id='.$row['commission_id']."\" class=\"cancel_payout\">".lang('cancel_payout')."</a>";
+           		$vars['data'][$i]['link'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=process_payout'.AMP.'id='.$row['commission_id']."\" class=\"process_payout\">".lang('process_payout')."</a> | <a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=cancel_payout'.AMP.'id='.$row['commission_id']."\" class=\"cancel_payout\">".lang('cancel_payout')."</a>";
            	}
            	elseif ($row['order_id']>0)
            	{
@@ -597,13 +678,13 @@ class Affiliate_plus_mcp {
  			
         }
         
-        $js = '
+        $js .= '
 				var draft_target = "";
 
-			$("<div id=\"cancel_payout_warning\">'.$this->EE->lang->line('cancel_payout').'</div>").dialog({
+			$("<div id=\"cancel_payout_warning\">'.$this->EE->lang->line('confirm_cancel_payout').'</div>").dialog({
 				autoOpen: false,
 				resizable: false,
-				title: "'.$this->EE->lang->line('confirm_cancel_payout').'",
+				title: "'.$this->EE->lang->line('cancel_payout').'",
 				modal: true,
 				position: "center",
 				minHeight: "0px", 
@@ -622,6 +703,32 @@ class Affiliate_plus_mcp {
 				$(".ui-dialog-buttonpane button:eq(2)").focus();	
 				return false;
 		});';
+		
+		$js .= '
+				var draft_target = "";
+
+			$("<div id=\"process_payout_warning\">'.$this->EE->lang->line('confirm_process_payout').'</div>").dialog({
+				autoOpen: false,
+				resizable: false,
+				title: "'.$this->EE->lang->line('process_payout').'",
+				modal: true,
+				position: "center",
+				minHeight: "0px", 
+				buttons: {
+					"'.lang('no').'": function() {
+					$(this).dialog("close");
+					},
+					"'.lang('yes').'": function() {
+					location=draft_target;
+				}
+				}});
+
+			$(".process_payout").click( function (){
+				$("#process_payout_warning").dialog("open");
+				draft_target = $(this).attr("href");
+				$(".ui-dialog-buttonpane button:eq(2)").focus();	
+				return false;
+		});';
         
         
         $q = $this->EE->db->select('COUNT(commission_id) AS qty')
@@ -629,7 +736,6 @@ class Affiliate_plus_mcp {
     		->where('order_id', 0)
     		->get();
     	
-    	$vars = array();
     	$vars['masspay_button'] = false;
     	
     	if ($q->row('qty') > 2)
@@ -673,6 +779,7 @@ class Affiliate_plus_mcp {
 		
 		}
         
+        $this->EE->javascript->output($js);
         
         $this->EE->jquery->tablesorter('.mainTable', '{
 			headers: {0: {sorter: false}, 7: {sorter: false}},
@@ -688,7 +795,7 @@ class Affiliate_plus_mcp {
         	$vars['total_count'] = $query->row('cnt');
  		}
  		
- 		$this->EE->db->flush_cache();
+ 		//$this->EE->db->flush_cache();
 
         $this->EE->load->library('pagination');
 
@@ -728,24 +835,43 @@ class Affiliate_plus_mcp {
 		{
 			show_error(lang('unauthorized_access'));
 		}
-       	
-       	$row = $q->row_array();
-       	
-       	//correct the amount, if needed
+		
+		$credits = $this->_correct_withdraw_amount($commission_q->row('member_id'), $commission_q->row('credits_pending'));
+		
+		if ($credits <= 0)
+		{
+			$this->EE->session->set_flashdata('message_failure', $this->EE->lang->line('payout_failed_unsufficient_balance'));
+		}
+		else
+		{
+	       	$this->_record_payout($commission_q->row('commission_id'), $commission_q->row('member_id'), $credits, $this->EE->input->post('method'), $this->EE->input->post('transaction_id'), $this->EE->input->post('comment'));
+	       	
+	    	$this->EE->session->set_flashdata('message_success', $this->EE->lang->line('request_processed'));
+ 		}
+        
+        $this->EE->functions->redirect(BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=payouts');
+	
+    }
+    
+    
+    function _balance($member_id)
+    {
+    	//correct the amount, if needed
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
-					->where('member_id', $commission_q->row('member_id'));
+					->where('member_id', $member_id);
 		$amount_avail = 0;
 		if ($q->num_rows()>0)
 		{
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if ($this->settings['devdemon_credits']=='y')
+		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
-					->where('member_id', $commission_q->row('member_id'));
+					->where('member_id', $member_id)
+					->get();
 			if ($q->num_rows()>0)
 			{
 				if ($q->row('credits_total') < $amount_avail)
@@ -755,19 +881,58 @@ class Affiliate_plus_mcp {
 			}
 		}
 		
-		$credits = abs($commission_q->row('credits_pending'));
+		return $amount_avail;
+    }
+    
+    
+    function _correct_withdraw_amount($member_id, $requested_amount)
+    {
+    	//correct the amount, if needed
+		$q = $this->EE->db->select('SUM(credits) as credits_total')
+					->from('affiliate_commissions')
+					->where('member_id', $member_id);
+		$amount_avail = 0;
+		if ($q->num_rows()>0)
+		{
+			$amount_avail = $q->row('credits_total');
+		}
+
+		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
+		{
+			$q = $this->EE->db->select('SUM(credits) as credits_total')
+					->from('credits')
+					->where('member_id', $member_id)
+					->get();
+			if ($q->num_rows()>0)
+			{
+				if ($q->row('credits_total') < $amount_avail)
+				{
+					$amount_avail = $q->row('credits_total');
+				}
+			}
+		}
+		
+		$credits = abs($requested_amount);
 		
 		if ($credits > $amount_avail)
 		{
 			$credits = $amount_avail;
 		}
 		
+		return $credits;
+    }
+    
+    
+    function _record_payout($commission_id, $member_id, $credits, $method, $transaction_id, $comment='')
+    {
+    	
+		
 		$insert = array(
-			'method'			=> $this->EE->input->post('method'),
-			'member_id'			=> $commission_q->row('member_id'),
+			'method'			=> $method,
+			'member_id'			=> $member_id,
 			'amount'			=> $credits,
-			'transaction_id'	=> $this->EE->input->post('transaction_id'),
-			'comment'			=> $this->EE->input->post('comment'),
+			'transaction_id'	=> $transaction_id,
+			'comment'			=> $comment,
 			'payout_date'		=> $this->EE->localize->now
 		);
 		$this->EE->db->insert('affiliate_payouts', $insert);
@@ -777,11 +942,11 @@ class Affiliate_plus_mcp {
 		   	'order_id'	=> $payout_id,
 		   	'credits'	=> -$credits
 		   );
-  		$this->EE->db->where('commission_id', $commission_q->row('commission_id'));
+  		$this->EE->db->where('commission_id', $commission_id);
   		$this->EE->db->update('affiliate_commissions', $data);
   		
   		
-  		if ($this->settings['devdemon_credits']=='y')
+  		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
 		{
 			$credits_action_q = $this->EE->db->select('action_id, enabled')
 									->from('exp_credits_actions')
@@ -793,56 +958,16 @@ class Affiliate_plus_mcp {
 					'action_id'			=> $credits_action_q->row('action_id'),
 					'site_id'			=> $this->EE->config->item('site_id'),
 					'credits'			=> -$credits,
-					'receiver'			=> $commission_q->row('member_id'),
+					'receiver'			=> $member_id,
 					'item_id'			=> $payout_id,
-					'item_parent_id' 	=> $commission_q->row('commission_id')
+					'item_parent_id' 	=> $commission_id
 				);
 				
 				$this->EE->affiliate_plus_lib->_save_credits($pData);
 			}
 		}
-    	
-    	$this->EE->session->set_flashdata('message_success', $this->EE->lang->line('request_processed'));
-        
-        $this->EE->functions->redirect(BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=payouts');
-	
     }
-    
-    
-    function process_payout_action()
-    {
 
-		if ($this->EE->input->get('id')=='')
-		{
-			show_error(lang('unauthorized_access'));
-		}
-		
-		$this->EE->load->helper('form');
-    	$this->EE->load->library('table');  
-
-       	$q = $this->EE->db->select('commission_id')
-       			->from('affiliate_commissions')
-       			->where('commission_id', $this->EE->input->get('id'))
-       			->where('order_id', 0)
-       			->where('method', 'withdraw')
-       			->get();
-		
-		if ($q->num_rows()==0)
-		{
-			show_error(lang('unauthorized_access'));
-		}
-       	
-       	$data = array(
-		   	'order_id'	=> -1
-		   );
-  		$this->EE->db->where('commission_id', $q->row('commission_id'));
-  		$this->EE->db->update('affiliate_commissions', $data);
-    	
-    	$this->EE->session->set_flashdata('message_success', $this->EE->lang->line('request_cancelled'));
-        
-        $this->EE->functions->redirect(BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=payouts');
-	
-    }
 
     
     function process_masspay_action()
@@ -851,11 +976,10 @@ class Affiliate_plus_mcp {
     		->from('affiliate_commissions')
     		->join('members', 'affiliate_commissions.referral_id=member.member_id', 'left')
     		->where('order_id', 0)
+    		->where('method', 'withdraw')
     		->order_by('order_id', 'asc')
     		->limit(250)
     		->get();
-		
-		$i = 0;
 		
 		// Set request-specific fields.
 		$emailSubject =urlencode($this->EE->config->item('site_name').NBS.lang('affiliate_payout'));
@@ -865,35 +989,43 @@ class Affiliate_plus_mcp {
 		// Add request-specific fields to the request string.
 		$nvpStr="&EMAILSUBJECT=$emailSubject&RECEIVERTYPE=$receiverType&CURRENCYCODE=$currency";
 		
+		$recipients = array();
+		
 		if ($q->num_rows()>2)
 		{
 			foreach ($q->result_array() as $row)
 			{
-				$i++;
-				$receiverEmail = urlencode($row['email']);
-				$amount = urlencode($row['credits_pending']);
-				$uniqueID = urlencode($row['commission_id']);
-				$note = '';//urlencode($receiverData['note']);
-				$nvpStr .= "&L_EMAIL$i=$receiverEmail&L_Amt$i=$amount&L_UNIQUEID$i=$uniqueID&L_NOTE$i=$note";
+				if (!isset($recipients[$row['referral_id']]))
+				{
+					$recipients[$row['referral_id']]['commission_id'] = $row['commission_id'];
+					$recipients[$row['referral_id']]['member_id'] = $row['referral_id'];
+					$credits = $this->_correct_withdraw_amount($row['referral_id'], $row['credits_pending']);
+					$recipients[$row['referral_id']]['credits'] = $credits;
+					$receiverEmail = urlencode($row['email']);
+					$amount = urlencode($credits);
+					$uniqueID = urlencode($row['commission_id']);
+					$note = '';//urlencode($receiverData['note']);
+					$nvpStr .= "&L_EMAIL$i=$receiverEmail&L_Amt$i=$amount&L_UNIQUEID$i=$uniqueID&L_NOTE$i=$note";
+				}
 			}
 			
 			// Execute the API operation; see the PPHttpPost function above.
 			$httpParsedResponseAr = $this->_PPHttpPost('MassPay', $nvpStr);
 			
 			if("SUCCESS" == strtoupper($httpParsedResponseAr["ACK"]) || "SUCCESSWITHWARNING" == strtoupper($httpParsedResponseAr["ACK"])) {
-				foreach($receiversArray as $i => $receiverData) {
-					$DB->query("UPDATE exp_payouts SET status=1, transaction_date='".$now."', approver_id='".$SESS->userdata['member_id']."', approver_ip='".$SESS->userdata['ip_address']."' WHERE id=".$receiverData['uniqueID']);	
-					//$q = $DB->query("SELECT deposits_avail, payout_avail FROM exp_deposits WHERE member_id='".$SESS->userdata['member_id']."' ORDER BY cts DESC LIMIT 1");
-					//$DB->query("INSERT INTO exp_deposits SET member_id='".$receiverData['member_id']."', order_id='".$receiverData['uniqueID']."', method='Payout', deposits_used='".$receiverData['amount']."', deposits_avail='".($q->row['deposits_avail']-$receiverData['amount'])."', payout_avail='".($q->row['payout_avail']-$receiverData['amount'])."',  cts='".date("Y-m-d H:i:s", $now)."'");	
-					
+				foreach($recipients as $member_id => $recipient_data) 
+				{
+					$this->_record_payout($recipient_data['commission_id'], $member_id, $recipient_data['credits'], 'masspay', $httpParsedResponseAr["CORRELATIONID"]);
 				}
-				exit('MassPay Completed Successfully: '.print_r($httpParsedResponseAr, true));
+				//exit('MassPay Completed Successfully: '.print_r($httpParsedResponseAr, true));
+				$this->EE->session->set_flashdata('message_success', str_replace("%x", count($recipients), lang('masspay_processed')));
 			} else  {
-				exit('MassPay failed: ' . print_r($httpParsedResponseAr, true));
+				$error_message = ($transaction['L_LONGMESSAGE0']) ? $transaction['L_LONGMESSAGE0'] : lang('masspay_failed');
+				$this->EE->session->set_flashdata('message_failure', $error_message);
 			}
 		}
 		
-		$this->EE->session->set_flashdata('message_success', str_replace("%x", $i, lang('masspay_processed')));
+		
         
         $this->EE->functions->redirect(BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=payouts');
 		
@@ -1116,11 +1248,13 @@ class Affiliate_plus_mcp {
         switch ($ext_settings['ecommerce_solution'])
         {
         	case 'simplecommerce':
+        	case 'store':
         		$this->EE->db->select('affiliate_commissions.*, referrers.screen_name AS referrer_screen_name, referrals.screen_name AS referral_screen_name')
         			->from('affiliate_commissions')
 					->join('members AS referrers', 'affiliate_commissions.member_id=referrers.member_id', 'left')
 					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left');
         		break;
+
 			case 'cartthrob':
         	default:
         		$this->EE->load->add_package_path(PATH_THIRD.'cartthrob/');
@@ -1134,13 +1268,15 @@ class Affiliate_plus_mcp {
         			->join('channel_titles', 'affiliate_commissions.order_id=channel_titles.entry_id', 'left');
         		break;
         }
+        
+        $this->EE->db->where('affiliate_commissions.order_id > ', 0);
 		
 		if ($vars['selected']['member_id']!='' || $vars['selected']['date_from']!='' || $vars['selected']['date_to']!='')
 		{
-			$this->EE->db->start_cache();
+			//$this->EE->db->start_cache();
 			if ($vars['selected']['member_id']!='')
 			{
-				$this->EE->db->where('referrers.member_id', $vars['selected']['member_id']);
+				$this->EE->db->where('affiliate_commissions.member_id', $vars['selected']['member_id']);
 			}
 			if ($vars['selected']['date_from']!='')
 			{
@@ -1150,7 +1286,7 @@ class Affiliate_plus_mcp {
 			{
 				$this->EE->db->where('record_date <= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_to']));
 			}
-			$this->EE->db->stop_cache();
+			//$this->EE->db->stop_cache();
 		}
 		
 		if ($this->perpage!=0)
@@ -1179,23 +1315,22 @@ class Affiliate_plus_mcp {
            switch ($ext_settings['ecommerce_solution'])
 	        {
 	        	case 'simplecommerce':
+	        	case 'store':
 	        		$vars['data'][$i]['order'] = "<a href=\"".BASE.AMP.'C=content_publish'.AMP.'M=entry_form'.AMP.'entry_id='.$row['order_id']."\">".lang('order').NBS.$row['order_id']."</a>";   
 	        		break;
         		case 'cartthrob':
         		default:
-					$vars['data'][$i]['customer'] = ($row['referral_id']!=0)?"<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['referral_id']."\">".$row['referral_screen_name']."</a>":lang('guest');  
+					$vars['data'][$i]['order'] = "<a href=\"".BASE.AMP.'C=content_publish'.AMP.'M=entry_form'.AMP.'entry_id='.$row['order_id']."\">".$row['order_title']."</a>";   
 					break;
 			}
+			$vars['data'][$i]['customer'] = ($row['referral_id']!=0)?"<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['referral_id']."\">".$row['referral_screen_name']."</a>":lang('guest');  
            $vars['data'][$i]['commission'] = $row['credits']; 
            $vars['data'][$i]['other1'] = '';    
            $i++;
  			
         }
         
-        $this->EE->jquery->tablesorter('.mainTable', '{
-			headers: {0: {sorter: false}, 7: {sorter: false}},
-			widgets: ["zebra"]
-		}');
+        
 
 		if (($vars['selected']['rownum']==0 && $this->perpage > $query->num_rows()) || $this->perpage==0)
 		{
@@ -1206,13 +1341,34 @@ class Affiliate_plus_mcp {
  			
   			$this->EE->db->select("COUNT('*') AS count")
   				->from('affiliate_commissions');
+  				
+			if ($vars['selected']['member_id']!='' || $vars['selected']['date_from']!='' || $vars['selected']['date_to']!='')
+			{
+				if ($vars['selected']['member_id']!='')
+				{
+					$this->EE->db->where('affiliate_commissions.member_id', $vars['selected']['member_id']);
+				}
+				if ($vars['selected']['date_from']!='')
+				{
+					$this->EE->db->where('record_date >= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_from']));
+				}
+				if ($vars['selected']['date_to']!='')
+				{
+					$this->EE->db->where('record_date <= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_to']));
+				}
+			}
 	        
 	        $q = $this->EE->db->get();
 	        
 	        $vars['total_count'] = $q->row('count');
  		}
  		
- 		$this->EE->db->flush_cache();
+ 		//$this->EE->db->flush_cache();
+ 		
+ 		$this->EE->jquery->tablesorter('.mainTable', '{
+			headers: {0: {sorter: false}, 7: {sorter: false}},
+			widgets: ["zebra"]
+		}');
 
         $this->EE->load->library('pagination');
 
@@ -1232,143 +1388,7 @@ class Affiliate_plus_mcp {
     	return $this->EE->load->view('stats', $vars, TRUE);
 	
     }
-	
-	
-	function _product_stats($product_id)
-	{
-        $ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
-        if (empty($ext_settings))
-        {
-        	$this->EE->functions->redirect(BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=settings');
-			return;
-        }
-        
-        if ($this->EE->input->get('stats_type')===false || $this->EE->input->get('id')===false)
-    	{
-    		show_error(lang('invalid_parameter'));
-    	}
-		
-		$this->EE->load->helper('form');
-    	$this->EE->load->library('table');  
-        $this->EE->load->library('javascript');
 
-    	$vars = array();
-        
-        if ($this->EE->input->get_post('perpage')!==false)
-        {
-        	$this->perpage = $this->EE->input->get_post('perpage');	
-        }
-        $vars['selected']['perpage'] = $this->perpage;
-        
-        $vars['selected']['rownum']=($this->EE->input->get_post('rownum')!='')?$this->EE->input->get_post('rownum'):0;
-        
-        $vars['selected']['search']=$this->EE->input->get_post('search');
-        
-        switch ($ext_settings['ecommerce_solution'])
-        {
-        	case 'cartthrob':
-        	default:
-        		$this->EE->load->add_package_path(PATH_THIRD.'cartthrob/');
-				$this->EE->load->model('cartthrob_settings_model');
-				$cartthrob_config = $this->EE->cartthrob_settings_model->get_settings();
-				$this->EE->load->remove_package_path(PATH_THIRD.'cartthrob/');
-        		$this->EE->db->select('entry_id AS product_id, title AS product_title, commission_rate, require_purchase, SUM(credits) AS total_commission')
-        			->from('channel_titles')
-        			->join('affiliate_product_settings', "channel_titles.entry_id=affiliate_product_settings.product_id AND ".$this->EE->db->dbprefix('affiliate_product_settings').".system='".$ext_settings['ecommerce_solution']."'", 'left')
-        			->join('affiliate_commissions', "channel_titles.entry_id=affiliate_commissions.product_id AND ".$this->EE->db->dbprefix('affiliate_commissions').".method='".$ext_settings['ecommerce_solution']."'", 'left')
-					->where_in('channel_id', $cartthrob_config['product_channels']);
-					//->where_in('status', $cartthrob_config['status']);
-        		break;
-        }
-		
-		if ($vars['selected']['search']!='')
-		{
-			$this->EE->db->where("product_title LIKE '%".$this->EE->db->escape_str($vars['selected']['search'], true)."%'");
-		}
-		
-		if ($this->perpage!=0)
-		{
-        	$this->EE->db->limit($this->perpage, $vars['selected']['rownum']);
- 		}
-
-        $query = $this->EE->db->get();
-        $vars['total_count'] = $query->num_rows();
-        
-        $vars['table_headings'] = array(
-                        lang('id'),
-                        lang('product'),
-                        lang('total_commission'),
-                        lang('commission_rate'),
-                        lang('purchase_required'),
-                        lang('view_stats'),
-                        lang('edit_product_settings')
-        			);		
-		   
-		$i = 0;
-        foreach ($query->result_array() as $row)
-        {
-           $vars['data'][$i]['id'] = $row['product_id'];
-           $vars['data'][$i]['product'] = $row['product_title'];
-           $vars['data'][$i]['total_commission'] = $row['total_commission'];
-           $vars['data'][$i]['commission_rate'] = $row['commission_rate'].'%'; 
-           $vars['data'][$i]['purchase_required'] = ($row['require_purchase']=='y')?lang('yes'):lang('no');    
-           $vars['data'][$i]['stats_link'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats'.AMP.'stats_type=product'.AMP.'id='.$row['product_id']."\" title=\"".$this->EE->lang->line('view_stats')."\"><img src=\"".$this->EE->config->slash_item('theme_folder_url')."third_party/affiliate_plus/stats.png\" alt=\"".$this->EE->lang->line('view_stats')."\"></a>";
-           $vars['data'][$i]['edit_product_settings'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=edit_product_settings'.AMP.'id='.$row['product_id']."\" title=\"".$this->EE->lang->line('edit')."\"><img src=\"".$this->EE->cp->cp_theme_url."images/icon-edit.png\" alt=\"".$this->EE->lang->line('edit')."\"></a>";
-           $i++;
- 			
-        }
-        
-        $this->EE->jquery->tablesorter('.mainTable', '{
-			headers: {0: {sorter: false}, 7: {sorter: false}},
-			widgets: ["zebra"]
-		}');
-
-		if ($this->perpage==0)
-		{
-        	$vars['total_count'] = $query->num_rows();
- 		}
- 		else
- 		{
- 			switch ($ext_settings['ecommerce_solution'])
-	        {
-	        	case 'cartthrob':
-	        	default:
-	        		$this->EE->db->select("COUNT('".$this->EE->db->dbprefix('channel_titles').".*') AS count")
-	        			->from('channel_titles')
-	        			->join('affiliate_product_settings', "channel_titles.entry_id=affiliate_product_settings.product_id AND ".$this->EE->db->dbprefix('affiliate_product_settings').".system='".$ext_settings['ecommerce_solution']."'", 'left')
-						->where_in('channel_id', $cartthrob_config['product_channels']);
-	        		break;
-	        }
-			
-			if ($vars['selected']['search']!='')
-			{
-				$this->EE->db->where("title LIKE '%".$this->EE->db->escape_str($vars['selected']['search'], true)."%'");
-			}
-	        
-	        $q = $this->EE->db->get();
-	        
-	        $vars['total_count'] = $q->row('count');
- 		}
-
-        $this->EE->load->library('pagination');
-
-        $base_url = BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=products';
-        $base_url .= AMP.'perpage='.$vars['selected']['perpage'];
-        $base_url .= AMP.'search='.$vars['selected']['search'];
-
-        $p_config = $this->_p_config($base_url, $vars['selected']['perpage'], $vars['total_count']);
-
-		$this->EE->pagination->initialize($p_config);
-        
-		$vars['pagination'] = $this->EE->pagination->create_links();
-        
-    	return $this->EE->load->view('stats', $vars, TRUE);
-	
-    }
-    
-    
-    
-    
     
     
     
@@ -1430,7 +1450,7 @@ class Affiliate_plus_mcp {
 			'cartthrob'			=>	lang('cartthrob'),
 			//'brilliantretail'	=>	lang('brilliantretail'),
 			'simplecommerce'	=>	lang('simplecommerce'),
-			//'store'				=>	lang('expressostore')
+			'store'				=>	lang('expressostore')
 		);
     	
  

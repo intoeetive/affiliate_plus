@@ -20,12 +20,12 @@ else
 	<fieldset>
 		<legend><?=lang('refine_results')?></legend>
 
-	<?=form_open('C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=invitations'.AMP.'method=index', array('id'=>'invitations_filter_form'));?>
+	<?=form_open('C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats');?>
 
 		<div class="group">
             <?php
 			
-			$data = array(
+			$field = array(
               'name'        => 'date_from',
               'value'       => $selected['date_from'],
               'size'        => '25',
@@ -33,9 +33,9 @@ else
               'style'       => 'width:120px'
             );
 			
-			echo lang('dates_from').NBS.NBS.form_input($data);
+			echo lang('dates_from').NBS.NBS.form_input($field);
 			
-			$data = array(
+			$field = array(
               'name'        => 'date_to',
               'value'       => $selected['date_to'],
               'size'        => '25',
@@ -43,7 +43,7 @@ else
               'style'       => 'width:120px'
             );
 			
-			echo lang('_to').NBS.NBS.form_input($data);
+			echo lang('_to').NBS.NBS.form_input($field);
 			
 			echo NBS.NBS.NBS;
 			
@@ -76,6 +76,7 @@ $this->table->set_heading($table_headings);
 
 foreach ($data as $item)
 {
+	//var_dump($item);
 	$this->table->add_row($item['date'], $item['affiliate'] , $item['order'], $item['customer'], $item['commission'], $item['other1']);
 }
 

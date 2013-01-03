@@ -63,6 +63,7 @@ class Affiliate_plus_upd {
 			'rule_type'							=> array('type' => 'ENUM',		'constraint'=> "'open','restricted'",	'default' => 'open'),
 			
 			'rule_terminator'					=> array('type' => 'CHAR',		'constraint'=> 1,	'default' => 'n'),
+			'discount_processing'				=> array('type' => 'ENUM',		'constraint'=> "'dividebyprice','dividebyqty','firstitem'",	'default' => 'dividebyamount'),
 						
 			'rule_participant_members'						=> array('type' => 'TEXT',		'default' => ''),
 			'rule_participant_member_groups'				=> array('type' => 'TEXT',		'default' => ''),
@@ -113,7 +114,7 @@ class Affiliate_plus_upd {
 		//exp_affiliate_commissions
 		$fields = array(
 			'commission_id'		=> array('type' => 'INT',		'unsigned' => TRUE, 'auto_increment' => TRUE),
-			'order_id'			=> array('type' => 'INT',		'unsigned' => TRUE, 'default' => 0),
+			'order_id'			=> array('type' => 'INT',		'default' => 0),
 			'method'			=> array('type' => 'VARCHAR',	'constraint'=> 50,	'default' => ''),//carttrob, brilliantretail, store, simplecommerce, withdraw
 			'member_id'			=> array('type' => 'INT',		'unsigned' => TRUE, 'default' => 0),
 			'hit_id'			=> array('type' => 'INT',		'unsigned' => TRUE, 'default' => 0),
@@ -210,6 +211,14 @@ class Affiliate_plus_upd {
 			if ($this->EE->db->field_exists('rule_terminator', 'affiliate_rules') == FALSE)
 			{
 				$this->EE->dbforge->add_column('affiliate_rules', array('rule_terminator' => array('type' => 'CHAR', 'constraint'=> 1, 'default' => 'n') ) );
+			}
+        }
+        
+        if ($current < 0.05)
+        {
+			if ($this->EE->db->field_exists('discount_processing', 'affiliate_rules') == FALSE)
+			{
+				$this->EE->dbforge->add_column('affiliate_rules', array('discount_processing' => array('type' => 'ENUM', 'constraint'=> "'dividebyprice','dividebyqty','firstitem'",	'default' => 'dividebyprice') ) );
 			}
         }
 		

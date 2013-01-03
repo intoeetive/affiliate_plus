@@ -54,7 +54,7 @@ class Affiliate_plus_lib {
 	function update_hit_record($member_id)
 	{
 		//do we have cookies?
-		if (!$this->EE->input->cookie('affiliate_plus_referrer') || !$this->EE->input->cookie('affiliate_plus_hit_id'))
+		if (!$this->EE->input->cookie('affiliate_plus_referrer_id') || !$this->EE->input->cookie('affiliate_plus_hit_id'))
 		{
 			return false;
 		}
@@ -97,6 +97,18 @@ class Affiliate_plus_lib {
     	{
     		if ($this->EE->session->userdata('member_id')!=0)
     		{
+				//only if he joined AFTER link was clicked
+				$q = $this->EE->db->select('hit_date')
+		    				->from('affiliate_hits')
+		    				->where('member_id', $this->EE->session->userdata('member_id'))
+		    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
+							->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
+							->get();
+				if ($q->row('hit_date') <= $this->EE->session->userdata('join_date'))
+				{
+					return false;
+				}
+
 				$hit_id = $this->EE->affiliate_plus_lib->update_hit_record($this->EE->session->userdata('member_id'));
 				if ($hit_id!=false)
 	    		{
@@ -148,7 +160,7 @@ class Affiliate_plus_lib {
 						->order_by('hit_id', 'asc')
 						->limit(1)
 						->get();
-			if ($q->num_rows()==0 || $q->row('referrer_id')!=0)
+			if ($q->num_rows()==0 || $q->row('referrer_id')==0)
 			{
 				return false;
 			}
