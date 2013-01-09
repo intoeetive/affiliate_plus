@@ -21,14 +21,14 @@ $this->table->set_heading(
     array('data' => lang('title'), 'style' => 'width:50%;'),
     array('data' => lang('commission_rate'), 'style' => 'width:10%;'),
     array('data' => lang('priority'), 'style' => 'width:10%;'),
-    array('data' => '', 'style' => 'width:10%;'),
-    array('data' => '', 'style' => 'width:10%;')
+    array('data' => lang('edit'), 'style' => 'width:10%;'),
+    array('data' => lang('delete'), 'style' => 'width:10%;')
 );
 
 
 foreach ($data as $item)
 {
-	$this->table->add_row($item['rule_id'], $item['rule_title'] , $item['commission_rate'], $item['rule_priority'], $item['edit']);//, $item['stats']);
+	$this->table->add_row($item['rule_id'], $item['rule_title'] , $item['commission_rate'], $item['rule_priority'], $item['edit'], $item['delete']);//, $item['stats']);
 }
 
 echo $this->table->generate();

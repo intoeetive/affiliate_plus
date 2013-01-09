@@ -72,9 +72,11 @@
 
 <p>The referral commission for each rule is summed up.</p>
 
-<p>The link between affiliate and referral is established when affiliate link is clicked. The cookies need to be enabled in referral's browser. </p>
+<p>The link between affiliate and referral is established when affiliate link is clicked. The cookies need to be enabled in referral's browser. Registration is not required, but once refferal has created user account in your system (i.e. registered himself) the link becomes permanent and commission will be added even if referral makes purchase from other computer (guest purchases from his computer will not generate commission anymore).</p>
 
 <p>The referral record will not be made if user was registered before</p>
+
+<p>The module works with following e-comerce solutions: CartThrob, Store, Simple Commerce (PayPal cart is not supported)</p>
 
 	<h2><a name="settings" href="#top">&uarr;</a>Settings</h2>
 
@@ -82,7 +84,7 @@
 <p>The main settings are:
 <br />
 E-commerce solution used on your site (currently CartThrob, Store and SimpleCommerce are supported)<br />
-Minimum amount to withdraw (requests for smaller amounts will not be accepcted)<br />
+Minimum amount to withdraw (requests for smaller amounts will not be accepcted) - provide only number, without currency code<br />
 Integrate with DevDemon Credits module (if set, every commission will also be recorded and credit and can then be used using Credits gateway)<br />
 Mark rule as "terminator" (all other rules of lower priority will not be processed)<br />
 Discounts treatment (because comission is calculated per-product, dicount need to de divided between items in the order, and it can be done proportinally to number of products in the order or to their price)
@@ -112,21 +114,35 @@ Discounts treatment (because comission is calculated per-product, dicount need t
 
 <p>Besides, you can make each rule be applicable only if following conditionals are met:<br />
 &mdash; same product has been purchased by affiliate<br />
-&mdash; the total amount of purchases by referral is greater than some amount<br />
-&mdash; the total number of purchases by referral is more than some number<br />
-&mdash; the refferal record was made not too ling ago (time defined in seconds)
+&mdash; the total amount of purchases by referral is greater than some amount (also requires customer to be logged in)<br />
+&mdash; the total number of purchases by referral is more than some number (also requires customer to be logged in)<br />
+&mdash; the refferal record was made not too long ago (time defined in seconds)
 </p>
 
 <p><strong>Example 1:</strong></p>
-<p>There are 2 rules: "All customers" (medium priority) giving affiliate 2% from every purchase, "Premium customers" rule (medium priority) giving 1% from purchases by members in "Premium customers" group (rule marked as terminator).</p>
-<p>The referred customer A, being not logged in, is byuing Product A for $100. The affiliate will get 2% = $2</p>
-<p>The referred customer B (in "Premium customers" group) is byuing same Product A with a discount for $90. The affiliate will get 1% = $0.90</p>
+<p>There are 2 rules: "All customers" (medium priority) giving affiliate 1% from every purchase, "Premium affiliates" rule (higher priority, marked as terminator) giving 2% from purchases for affiliates in "Premium members" group.</p>
+<p>The referred customer A, being not logged in, is byuing Product A for $100. The affiliate will get 1% = $1</p>
+<p>The referred customer B, referred by Premium affiliate, is byuing same Product A with a discount for $90. The affiliate will get 2% = $1.80</p>
 
 <p><strong>Example 2:</strong></p>
 <p>There are 3 rules: "Default rule" (medium priority) giving affiliate 1% from every purchase, "Premium products" rule (medium priority) giving 3% from purchase for selected products and "Special offer" (high priority), marked as terminator, giving $3 for products marked with "special offer" custom field.</p>
 <p>The referred customer A is byuing Product A for $100, which is not in list of selected product, neither marked as special offer. The affiliate will get 1% = $1</p>
 <p>The referred customer B is byuing Product B for $100, which IS in list of selected product, but not marked as special offer. The affiliate will get 1%+3% = $4</p>
 <p>The referred customer C is byuing Product C for $100, which IS in list of selected product, and has "special offer" custom field set to "yes". The affiliate will get $3</p>
+
+<p><strong>Example 3:</strong></p>
+<p>The affiliate is getting 5% from first $100 spent by referral, and 1% for all next purchases.</p>
+<p>This can be achieved by creating 2 rules: "1%" giving 1% for all purchases and "5% for first $100" giving 4% and limited to $100 on total amount of purchases. Note that 2nd rules gives 4%, not 5%, because the commissions are summed up.</p>
+<p>Another approach would be to make 2nd rule give 5%, set higher priority to it and make it a terminator. But in some cases such setup will behave differently: if the amount of first purchase is greater than $100, in 1st case the affiliate will get commission for all amount (5% from $100 and 1% from the rest of amount), but in 2nd case he will get commission for only $100 (5%).
+</p>
+
+<p><strong>Example 4:</strong></p>
+<p>The site is letting users "fill the balance/buy credits" and then spend their balance to pay for premium features. The balance is filled by purchasing items in Credit Packs channel. The affiliate is getting 1 cent for every dollar filled to balance</p>
+<p>The rules needs to be restricted to items in Credits Packs product group.</p>
+
+<p><strong>Example 5:</strong></p>
+<p>The site from example 4 is also letting users buy premium features directly using PayPal (not necessarely balance). The affiliate should get 0.5% for these purchases as well.</p>
+<p>We need to add a rule that will be restricted to purchases in "premium features" product group and using PayPal gateway (so that purchases or premium features using balance/creadits system are not rewarded).</p>
 
 
 	<h2><a name="balance" href="#top">&uarr;</a>Balance and payouts</h2>
@@ -155,7 +171,7 @@ Discounts treatment (because comission is calculated per-product, dicount need t
 
 <p>The current and past withdaw requests can be found in Payouts section of module control panel.</p>
 <p>On that page, the admin can cancel the request or mark it as processed. When marking as processed, it is possible to record the method used for payout (PayPal, Bank transfer etc.), add corresponding Transaction ID and comment.</p>
-<p>It is also possible to process all pending automatically using PayPal MassPay. The number of pending requests should be greater than 2. If you have more than 250 requests pending, be aware that only 250 requests will be submitted to MassPay at a time.</p>
+<p>It is also possible to process all pending automatically using PayPal MassPay. The number of pending requests should be greater than 2. If you have more than 250 requests pending, be aware that only 250 requests will be submitted to MassPay at a time. You will see a link to process requests with MassPay as s0on as there will be 3 or more pending requests.</p>
 
 	<h2><a name="stats" href="#top">&uarr;</a>Stats</h2>
 	

@@ -1,4 +1,4 @@
-<?=form_open('C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=process_payout_action');?>
+<?=form_open('C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=process_payout');?>
 
 <?php 
 
@@ -6,9 +6,11 @@ $this->load->view('tabs');
 
 ?> 
 
+<h3><?=lang('process_payout')?></h3>
+
 <?php 
 $this->table->set_template($cp_pad_table_template);
-foreach ($arr as $key => $val)
+foreach ($data as $key => $val)
 {
 	$this->table->add_row(lang($key, $key), $val);
 }

@@ -78,8 +78,8 @@ class Affiliate_plus_lib {
 		$this->EE->db->where('hit_id', $q->row('hit_id'));
 		$this->EE->db->update('affiliate_hits', $update);
 		
-		$this->EE->functions->set_cookie('affiliate_plus_referrer_id', '', false);	
-		$this->EE->functions->set_cookie('affiliate_plus_hit_id', '', false);	
+		//$this->EE->functions->set_cookie('affiliate_plus_referrer_id', '', false);	
+		//$this->EE->functions->set_cookie('affiliate_plus_hit_id', '', false);	
 		
 		return $q->row('hit_id');
     	
@@ -90,69 +90,9 @@ class Affiliate_plus_lib {
 	
 	function get_referrer_data()
 	{
-		$referrer_id = false;
+		$referrer_data = false;
 		
-		//is there a cookie and member logged in? if so, update hit record
-    	if ($this->EE->input->cookie('affiliate_plus_referrer_id')!='')
-    	{
-    		if ($this->EE->session->userdata('member_id')!=0)
-    		{
-				//only if he joined AFTER link was clicked
-				$q = $this->EE->db->select('hit_date')
-		    				->from('affiliate_hits')
-		    				->where('member_id', $this->EE->session->userdata('member_id'))
-		    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
-							->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
-							->get();
-				if ($q->row('hit_date') <= $this->EE->session->userdata('join_date'))
-				{
-					return false;
-				}
-
-				$hit_id = $this->EE->affiliate_plus_lib->update_hit_record($this->EE->session->userdata('member_id'));
-				if ($hit_id!=false)
-	    		{
-	    			$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
-		    				->from('affiliate_hits')
-		    				->where('hit_id', $hit_id)
-							->get();
-					if ($q->num_rows()==0)
-					{
-						return false;
-					}
-					else
-					{
-						$hit_id = $q->row('hit_id');
-						$hit_date = $q->row('hit_date');
-						$referrer_id = $q->row('referrer_id');
-					}
-	    		}
-	    		else
-	    		{
-	    			return false;
-	    		}
-  			}
-  			else
-  			{
-  				//check that we have a record that cookie points to
-  				$q = $this->EE->db->select('hit_id, hit_date, member_id')
-		    				->from('affiliate_hits')
-		    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
-							->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
-							->get();
-				if ($q->num_rows()==0 || $q->row('member_id')!=0)
-				{
-					return false;
-				}
-				else
-				{
-					$hit_id = $q->row('hit_id');
-					$hit_date = $q->row('hit_date');
-					$referrer_id = $this->EE->input->cookie('affiliate_plus_referrer_id');
-				}
-  			}
-    	}
-    	else if ($this->EE->session->userdata('member_id')!=0)
+		if ($this->EE->session->userdata('member_id')!=0)
     	{
     		$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
 	    				->from('affiliate_hits')
@@ -160,23 +100,74 @@ class Affiliate_plus_lib {
 						->order_by('hit_id', 'asc')
 						->limit(1)
 						->get();
-			if ($q->num_rows()==0 || $q->row('referrer_id')==0)
+			if ($q->num_rows()>0)
+			{
+				if ($q->row('referrer_id')!=0)
+				{
+					//using record from database
+					return $q->row_array();
+				}
+			}
+			//is there a cookie and member logged in? if so, update hit record
+			//but only if he joined AFTER link was clicked
+	    	if ($this->EE->input->cookie('affiliate_plus_hit_id')!='' && $this->EE->input->cookie('affiliate_plus_referrer_id')!='')
+	    	{
+	    		
+				$q = $this->EE->db->select('hit_id, hit_date, member_id, referrer_id')
+		    				->from('affiliate_hits')
+		    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
+							->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
+							->limit(1)
+							->get();
+				if ($q->num_rows()==0)
+				{
+					return false;
+				}
+				if ($q->row('hit_date') <= $this->EE->session->userdata('join_date'))
+				{
+					return false;
+				}
+				
+				if ($q->row('member_id')==0)
+				{
+					$hit_id = $this->EE->affiliate_plus_lib->update_hit_record($this->EE->session->userdata('member_id'));
+					if ($hit_id==false)
+					{
+						return false;
+					}
+					else
+					{
+						return $q->row_array();
+					}
+				}
+    		}
+			
+    	}	
+    	else
+		//if we have cookies but this is guest
+    	if ($this->EE->input->cookie('affiliate_plus_hit_id')!='' && $this->EE->input->cookie('affiliate_plus_referrer_id')!='')
+    	{
+			//check that we have a record that cookie points to
+			$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
+	    				->from('affiliate_hits')
+	    				->where('hit_id', $this->EE->input->cookie('affiliate_plus_hit_id'))
+						->where('referrer_id', $this->EE->input->cookie('affiliate_plus_referrer_id'))
+						->where('member_id != 0')
+						->get();
+			if ($q->num_rows()==0 )
+			//registered once, can NOT generate commission as guest
 			{
 				return false;
 			}
 			else
 			{
-				$hit_id = $q->row('hit_id');
-				$hit_date = $q->row('hit_date');
-				$referrer_id = $q->row('referrer_id');
+				return $q->row_array();
 			}
-    	}	
-		
-		return array(
-			'hit_id'		=> 	$hit_id,
-			'hit_date'		=> 	$hit_date,
-			'referrer_id'	=>	$referrer_id
-		);
+    	}
+    	else
+    	{
+    		return false;
+    	}
 		
 	}
 		

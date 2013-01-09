@@ -186,7 +186,7 @@ $lang = array(
 "Do not apply rule if total number of purchases is more than",
 
 "commission_aplied_maxtime" =>
-"Do not apply rule if purchase is made after <seconds> after affiliate link is clicked",
+"Do not apply rule if purchase is made later than &lt;seconds&gt; after affiliate link is clicked",
 
 "rule_gateways" =>
 "Gateways",
@@ -366,6 +366,54 @@ Log in to your Control Panel to process the payout.
 
 'firstitem' =>
 'Subtract discount from the price of first item(s) only',
+
+'need_products_in_store' =>
+'You need to have some products in your store',
+
+'bank' =>
+'Bank',
+
+'paypal' =>
+'PayPal',
+
+'other' =>
+'Other',
+
+'method' =>
+'Method',
+	
+'transaction_id' =>
+'Transaction ID',
+	
+'comment' =>
+'Comment',
+
+'masspay' =>
+'PayPal MassPay',
+
+'date_requested' =>
+'Date requested',
+
+'date_processed' =>
+'Date processed',
+
+'title' =>
+'Title',
+
+'referred_members' =>
+'Referred members',
+
+'name_contains' =>
+'Name contains',
+
+'commission_stats' =>
+'Commission stats',
+
+'referral' =>
+'Referral',
+
+'hit_date' =>
+'Hit date',
 
 /* END */
 ''=>''

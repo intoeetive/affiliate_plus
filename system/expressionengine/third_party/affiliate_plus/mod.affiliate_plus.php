@@ -739,6 +739,7 @@ class Affiliate_plus {
 				$row['payout_id'] = '';
 				$row['method'] = '';
 				$row['amount'] = 0;
+				$row['amount_pending'] = -$row['amount_pending'];
 				$row['transaction_id'] = '';
 				$row['comment'] = '';
 				$row['request_date'] = '';
@@ -748,7 +749,6 @@ class Affiliate_plus {
 			{
 				$row['comment'] = $this->EE->typography->parse_type($row['comment']); 
 	           	$row['method'] = $this->EE->lang->line($row['method']); 
-	           	$row['request_date'] = $row['record_date'];
 	           	$row['payment_date'] = $row['payout_date'];
    			}
            	$vars[] = $row;
