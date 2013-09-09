@@ -40,7 +40,14 @@ class Affiliate_plus_mcp {
         
         $this->EE->load->library('affiliate_plus_lib');
         
-        $this->EE->cp->set_variable('cp_page_title', lang('affiliate_plus_module_name'));
+        if ($this->EE->config->item('app_version')>=260)
+        {
+        	$this->EE->view->cp_page_title = lang('affiliate_plus_module_name');
+        }
+        else
+        {
+        	$this->EE->cp->set_variable('cp_page_title', lang('affiliate_plus_module_name'));
+        }
     } 
     
     
