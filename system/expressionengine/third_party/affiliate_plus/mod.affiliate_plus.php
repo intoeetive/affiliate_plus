@@ -551,6 +551,31 @@ class Affiliate_plus {
 
     	$vars = array();
     	$global_vars = array();
+    	
+    	$q = $this->EE->db->select("COUNT('*') AS count")
+  				->from('affiliate_hits')
+				 ->where('referrer_id', $this->EE->session->userdata('member_id'))
+				 ->get();
+		$global_vars['total_hits'] = $q->row('count');
+		
+		if ($global_vars['total_hits']==0)
+        {
+            return $this->EE->TMPL->no_results();
+        }
+        
+        $global_vars['balance'] = $this->balance();
+ 		$global_vars['withdraw_minimum'] = (float)$ext_settings['withdraw_minimum'];
+ 		$global_vars['total_commission_records'] = 0;
+ 		
+ 		$tagdata = $this->EE->TMPL->tagdata;
+ 		
+ 		$paginate_tagdata = '';
+	        
+        if ( preg_match_all("/".LD."paginate".RD."(.*?)".LD."\/paginate".RD."/s", $tagdata, $tmp)!=0)
+        {
+            $paginate_tagdata = $tmp[1][0];
+            $tagdata = str_replace($tmp[0][0], '', $tagdata);
+        }
        
         switch ($ext_settings['ecommerce_solution'])
         {
@@ -568,89 +593,45 @@ class Affiliate_plus {
 		
 		$this->EE->db->limit($perpage, $start);
         $query = $this->EE->db->get();
-        
-        if ($query->num_rows()==0)
-        {
-            return $this->EE->TMPL->no_results();
-        }
-        
-        
-        $tagdata = $this->EE->TMPL->tagdata;
-        $paginate_tagdata = '';
-        
-        if ( preg_match_all("/".LD."paginate".RD."(.*?)".LD."\/paginate".RD."/s", $tagdata, $tmp)!=0)
-        {
-            $paginate_tagdata = $tmp[1][0];
-            $tagdata = str_replace($tmp[0][0], '', $tagdata);
-        }
-        
-        foreach ($query->result_array() as $row)
-        {
-           $row['commission'] = $row['credits']; 
-           $row['method'] = $this->EE->lang->line($row['method']); 
-           $vars[] = $row;
-        }
-        
-        $tagdata = $this->EE->TMPL->parse_variables($tagdata, $vars);
 
-		if ($start==0 && $perpage > $query->num_rows())
-		{
-        	$global_vars['total_commission_records'] = $query->num_rows();
+        if ($query->num_rows()>0)
+        {
+	        
+	        foreach ($query->result_array() as $row)
+	        {
+	           $row['commission'] = $row['credits']; 
+	           $row['method'] = $this->EE->lang->line($row['method']); 
+	           $vars[] = $row;
+	        }
+	        
+	        $tagdata = $this->EE->TMPL->parse_variables($tagdata, $vars);
+	
+			if ($start==0 && $perpage > $query->num_rows())
+			{
+	        	$global_vars['total_commission_records'] = $query->num_rows();
+	 		}
+	 		else
+	 		{
+	 			
+	  			$this->EE->db->select("COUNT('*') AS count")
+	  				->from('affiliate_commissions')
+					 ->where('member_id', $this->EE->session->userdata('member_id'))
+					 ->where('order_id != ', 0);
+		        
+		        $q = $this->EE->db->get();
+		        
+		        $global_vars['total_commission_records']  = $q->row('count');
+	 		}
  		}
  		else
  		{
- 			
-  			$this->EE->db->select("COUNT('*') AS count")
-  				->from('affiliate_commissions')
-				 ->where('member_id', $this->EE->session->userdata('member_id'))
-				 ->where('order_id != ', 0)
-				 ->get();
-	        
-	        $q = $this->EE->db->get();
-	        
-	        $global_vars['total_commission_records']  = $q->row('count');
+ 			$global_vars['count'] = 1;
+ 			$global_vars['total_results'] = 1;
  		}
  		
- 		$global_vars['balance'] = $this->balance();
- 		$global_vars['withdraw_minimum'] = (float)$ext_settings['withdraw_minimum'];
- 		
- 		
  		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $global_vars);
-
-        if ($global_vars['total_commission_records'] > $perpage)
-        {
-            $this->EE->load->library('pagination');
-
-			$config['base_url']		= $basepath;
-			$config['prefix']		= 'P';
-			$config['total_rows'] 	= $global_vars['total_commission_records'];
-			$config['per_page']		= $perpage;
-			$config['cur_page']		= $start;
-			$config['first_link'] 	= $this->EE->lang->line('pag_first_link');
-			$config['last_link'] 	= $this->EE->lang->line('pag_last_link');
-
-			$this->EE->pagination->initialize($config);
-			$pagination_links = $this->EE->pagination->create_links();	
-            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', $pagination_links, $paginate_tagdata);			
-        }
-        else
-        {
-            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', '', $paginate_tagdata);		
-        }
         
-        switch ($paginate)
-        {
-            case 'top':
-                $tagdata = $paginate_tagdata.$tagdata;
-                break;
-            case 'both':
-                $tagdata = $paginate_tagdata.$tagdata.$paginate_tagdata;
-                break;
-            case 'bottom':
-            default:
-                $tagdata = $tagdata.$paginate_tagdata;
-        }
-        
+        $tagdata = $this->_process_pagination($global_vars['total_commission_records'], $perpage, $start, $basepath, $tagdata, $paginate, $paginate_tagdata);
         
         return $tagdata;
         
@@ -779,47 +760,89 @@ class Affiliate_plus {
  		
  		
  		$tagdata = $this->EE->TMPL->parse_variables_row($tagdata, $global_vars);
-
-        if ($global_vars['total_withdraw_records'] > $perpage)
-        {
-            $this->EE->load->library('pagination');
-
-			$config['base_url']		= $basepath;
-			$config['prefix']		= 'P';
-			$config['total_rows'] 	= $global_vars['total_withdraw_records'];
-			$config['per_page']		= $perpage;
-			$config['cur_page']		= $start;
-			$config['first_link'] 	= $this->EE->lang->line('pag_first_link');
-			$config['last_link'] 	= $this->EE->lang->line('pag_last_link');
-
-			$this->EE->pagination->initialize($config);
-			$pagination_links = $this->EE->pagination->create_links();	
-            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', $pagination_links, $paginate_tagdata);			
-        }
-        else
-        {
-            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', '', $paginate_tagdata);		
-        }
         
-        switch ($paginate)
-        {
-            case 'top':
-                $tagdata = $paginate_tagdata.$tagdata;
-                break;
-            case 'both':
-                $tagdata = $paginate_tagdata.$tagdata.$paginate_tagdata;
-                break;
-            case 'bottom':
-            default:
-                $tagdata = $tagdata.$paginate_tagdata;
-        }
-        
+        $tagdata = $this->_process_pagination($global_vars['total_withdraw_records'], $perpage, $start, $basepath, $tagdata, $paginate, $paginate_tagdata);
         
         return $tagdata;
         
 	
     }
 	
+    
+    
+    
+    
+    function _process_pagination($total, $perpage, $start, $basepath='', $out='', $paginate='bottom', $paginate_tagdata='')
+    {
+        if ($this->EE->config->item('app_version') >= 240)
+		{
+	        $this->EE->load->library('pagination');
+	        if ($this->EE->config->item('app_version') >= 260)
+	        {
+	        	$pagination = $this->EE->pagination->create(__CLASS__);
+	        }
+	        else
+	        {
+	        	$pagination = new Pagination_object(__CLASS__);
+	        }
+            if ($this->EE->config->item('app_version') >= 280)
+            {
+                $this->EE->TMPL->tagdata = $pagination->prepare($this->EE->TMPL->tagdata);
+                $pagination->build($total, $perpage);
+            }
+            else
+            {
+                $pagination->get_template();
+    	        $pagination->per_page = $perpage;
+    	        $pagination->total_rows = $total;
+    	        $pagination->offset = $start;
+    	        $pagination->build($pagination->per_page);
+            }
+	        
+	        $out = $pagination->render($out);
+  		}
+  		else
+  		{
+        
+	        if ($total > $perpage)
+	        {
+	            $this->EE->load->library('pagination');
+	
+				$config['base_url']		= $basepath;
+				$config['prefix']		= 'P';
+				$config['total_rows'] 	= $total;
+				$config['per_page']		= $perpage;
+				$config['cur_page']		= $start;
+				$config['first_link'] 	= $this->EE->lang->line('pag_first_link');
+				$config['last_link'] 	= $this->EE->lang->line('pag_last_link');
+	
+				$this->EE->pagination->initialize($config);
+				$pagination_links = $this->EE->pagination->create_links();	
+	            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', $pagination_links, $paginate_tagdata);			
+	        }
+	        else
+	        {
+	            $paginate_tagdata = $this->EE->TMPL->swap_var_single('pagination_links', '', $paginate_tagdata);		
+	        }
+	        
+	        switch ($paginate)
+	        {
+	            case 'top':
+	                $out = $paginate_tagdata.$out;
+	                break;
+	            case 'both':
+	                $out = $paginate_tagdata.$out.$paginate_tagdata;
+	                break;
+	            case 'bottom':
+	            default:
+	                $out = $out.$paginate_tagdata;
+	        }
+	        
+    	}
+        
+        return $out;
+    }
+    
 	
 
 

@@ -1278,6 +1278,18 @@ class Affiliate_plus_mcp {
         
     }
 	
+    
+    function _string_to_timestamp($human_string, $localized = TRUE)
+    {
+        if ($this->EE->config->item('app_version')<260)
+        {
+            return $this->EE->localize->convert_human_date_to_gmt($human_string, $localized);
+        }
+        else
+        {
+            return $this->EE->localize->string_to_timestamp($human_string, $localized);
+        }
+    }
 	 
 
     function stats()
@@ -1365,11 +1377,11 @@ class Affiliate_plus_mcp {
 			}
 			if ($vars['selected']['date_from']!='')
 			{
-				$this->EE->db->where('record_date >= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_from']));
+				$this->EE->db->where('record_date >= ', $this->_string_to_timestamp($vars['selected']['date_from']));
 			}
 			if ($vars['selected']['date_to']!='')
 			{
-				$this->EE->db->where('record_date <= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_to']));
+				$this->EE->db->where('record_date <= ', $this->_string_to_timestamp($vars['selected']['date_to']));
 			}
 			//$this->EE->db->stop_cache();
 		}
@@ -1444,11 +1456,11 @@ class Affiliate_plus_mcp {
 				}
 				if ($vars['selected']['date_from']!='')
 				{
-					$this->EE->db->where('record_date >= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_from']));
+					$this->EE->db->where('record_date >= ', $this->_string_to_timestamp($vars['selected']['date_from']));
 				}
 				if ($vars['selected']['date_to']!='')
 				{
-					$this->EE->db->where('record_date <= ', $this->EE->localize->convert_human_date_to_gmt($vars['selected']['date_to']));
+					$this->EE->db->where('record_date <= ', $this->_string_to_timestamp($vars['selected']['date_to']));
 				}
 			}
 	        
