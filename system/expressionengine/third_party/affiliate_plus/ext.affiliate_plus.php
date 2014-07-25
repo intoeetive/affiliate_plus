@@ -34,6 +34,7 @@ class Affiliate_plus_ext {
     
     var $settings 		= array();
     var $site_id		= 1;
+    var $edition        = 'aj';//'normal'
     
 	/**
 	 * Constructor
@@ -93,6 +94,11 @@ class Affiliate_plus_ext {
     			'method'	=> 'store_purchase',
     			'priority'	=> 10
     		),
+            array(
+    			'hook'		=> 'membrr_payment',
+    			'method'	=> 'membrr_payment',
+    			'priority'	=> 10
+    		),
     		
     		
             
@@ -123,6 +129,32 @@ class Affiliate_plus_ext {
     	{
     		return FALSE;
     	}
+        
+        if ($current < 0.2)
+        {
+            $hooks = array(
+        		array(
+        			'hook'		=> 'membrr_payment',
+        			'method'	=> 'membrr_payment',
+        			'priority'	=> 10
+        		)
+        		
+        	);
+        	
+            foreach ($hooks AS $hook)
+        	{
+        		$data = array(
+            		'class'		=> __CLASS__,
+            		'method'	=> $hook['method'],
+            		'hook'		=> $hook['hook'],
+            		'settings'	=> serialize($this->settings),
+            		'priority'	=> $hook['priority'],
+            		'version'	=> $this->version,
+            		'enabled'	=> 'y'
+            	);
+                $this->EE->db->insert('extensions', $data);
+        	}	
+        }
     	
     	$this->EE->db->where('class', __CLASS__);
     	$this->EE->db->update(
@@ -162,6 +194,386 @@ class Affiliate_plus_ext {
     	return $this->EE->affiliate_plus_lib->update_hit_record($data['member_id']);
     }
     
+
+
+
+
+
+
+
+
+    function membrr_payment($member_id, $subscription_id, $plan_id, $charge_id, $next_charge_date)
+    {
+		$referrer_data = $this->EE->affiliate_plus_lib->get_referrer_data($member_id);
+		if ($referrer_data===false) return;
+		
+		// how much has been charged?
+        
+        $amount_q = $this->EE->db->select('amount')
+                        ->from('membrr_payments')
+                        ->where('charge_id', $charge_id)
+                        ->where('recurring_id', $subscription_id)
+                        ->limit(1)
+                        ->get();
+        if ($amount_q->num_rows()==0) return false;
+        
+        $paid_for_product = $amount_q->row('amount');
+
+		if ($paid_for_product==0) return false;
+		
+		//get all rules
+		$rules_q = $this->EE->db->select()
+					->from('affiliate_rules')
+					->get();
+		if ($rules_q->num_rows()==0) return false;
+		$rules = array();
+		
+		foreach ($rules_q->result_array() as $key => $row)
+		{
+			$rules[] = $row;
+		}	
+		$priorities = array();
+		foreach ($rules as $key => $row)
+		{
+		    $priorities[$key] = $row['rule_priority'];
+		}
+		array_multisort($priorities, SORT_DESC, $rules);
+		
+		if (empty($rules)) return false;
+		
+		//loop through the rules
+		//we'll filter out the rules that can't be applied
+		$commission_amount = 0;
+		
+		$referrer_group_id = 0;
+		
+		$rules_used = array();
+		
+		foreach ($rules as $id=>$row)
+		{
+			
+			//echo $row['rule_title'];
+			
+			if ($row['commission_rate']==0) continue;
+			
+			//member checks
+			
+			if ($row['rule_participant_members']!='')
+			{
+				$arr = unserialize($row['rule_participant_members']);
+				if (!empty($arr))
+				{
+					if (!in_array($referrer_data['referrer_id'], $arr))
+					{
+						unset($rules[$id]);
+						continue;
+					}
+				}
+			}
+			//echo 'rule_participant_members';
+			
+			if ($row['rule_participant_member_groups']!='')
+			{
+				$arr = unserialize($row['rule_participant_member_groups']);
+				if (!empty($arr))
+				{
+					if ($referrer_group_id==0)
+					{
+						$q = $this->EE->db->select('group_id')
+								->from('members')
+								->where('member_id', $referrer_data['referrer_id'])
+								->get();
+						$referrer_group_id = $q->row('group_id');
+					}
+					if (!in_array($referrer_group_id, $arr))
+					{
+						unset($rules[$id]);
+						continue;
+					}
+				}
+			}
+			//echo 'rule_participant_member_groups';
+			
+			if ($row['rule_participant_member_categories']!='')
+			{
+				$arr = unserialize($row['rule_participant_member_categories']);
+				if (!empty($arr))
+				{
+					if ($this->EE->db->table_exists('category_members') != FALSE)
+					{
+						$q = $this->EE->db->select('cat_id')
+								->from('category_members')
+								->where('member_id', $referrer_data['referrer_id'])
+								->where_in('cat_id', $arr)
+								->get();
+						if ($q->num_rows()==0)
+						{
+							unset($rules[$id]);
+							continue;
+						}
+					}
+				}
+			}
+			//echo 'rule_participant_member_categories';
+			
+			if ($row['rule_participant_by_profile_field']!='')
+			{
+				$field = 'm_field_id_'.$row['rule_participant_by_profile_field'];
+				$q = $this->EE->db->select($field)
+						->from('member_data')
+						->where('member_id', $referrer_data['referrer_id'])
+						->get();
+				if (!in_array($q->row("$field"), array("y", "Y", "yes", "Yes", "1")))
+				{
+					unset($rules[$id]);
+					continue;
+				}
+			}
+			//echo 'rule_participant_by_profile_field';
+			
+			//prev purchases rules check
+			
+			if ($row['commission_aplied_maxamount']>0)
+			{
+				if ($member_id==0)
+				{
+					continue;
+				}
+				$q = $this->EE->db->select("SUM(amount) AS prev_purchases_total")
+						->from('membrr_payments')
+                        ->join('membrr_subscriptions', 'membrr_payments.recurring_id=membrr_subscriptions.recurring_id', 'left')
+						->where('member_id', $member_id)
+						->where('charge_id != ', $charge_id)
+						->get();
+				$purchases_total = 0;
+				if ($q->num_rows() > 0)
+				{
+					$purchases_total += $q->row("prev_purchases_total");
+					if ($q->row("prev_purchases_total")>=$row['commission_aplied_maxamount'])
+					{
+						unset($rules[$id]);
+						continue;
+					}
+				}
+			}
+			//echo 'commission_aplied_maxamount';
+			
+			
+			if ($row['commission_aplied_maxpurchases']>0)
+			{
+				if ($member_id==0)
+				{
+					continue;
+				}
+				$q = $this->EE->db->select('COUNT(*) AS purchases_count')
+						->from('membrr_subscriptions')
+						->where('member_id', $member_id)
+						->where('recurring_id != ', $subscription_id)
+						->get();
+				if ($q->num_rows() > 0 && $q->row('purchases_count') > 0)
+				{		
+					if ($q->row('purchases_count') > $row['commission_aplied_maxpurchases'])
+					{
+						unset($rules[$id]);
+						continue;
+					}
+				}
+			}
+			//echo 'commission_aplied_maxpurchases';
+			
+			if ($row['commission_aplied_maxtime']>0)
+			{
+				if (($referrer_data['hit_date']+$row['commission_aplied_maxtime']) > $this->EE->localize->now)
+				{
+					unset($rules[$id]);
+					continue;
+				}
+			}
+			//echo 'commission_aplied_maxtime';
+			
+			//gateway check not applicable
+			
+			//echo "basic check passed";
+
+			//per-product checks
+		
+			if ($row['rule_product_ids']!='')
+			{
+				$arr = unserialize($row['rule_product_ids']);
+				if (!empty($arr))
+				{
+					//if (count(array_intersect($purchased_items, $arr)) == 0)
+					if (!in_array($plan_id, $arr))
+					{
+						continue;
+					}
+				}
+			}
+		     //echo 'rule_product_ids';
+		
+			//no product groupd check
+            //not product by custom field check
+	
+			
+			if ($row['rule_require_purchase']=='y')
+			{
+				$q = $this->EE->db->select('recurring_id')
+						->from('membrr_subscriptions')
+						->where('plan_id', $plan_id)
+						->where('member_id', $referrer_data['referrer_id'])
+						->where('active', '1')
+						->get();
+				if ($q->num_rows()==0)
+				{
+					continue;
+				}
+			}
+			//echo 'rule_require_purchase';
+			//passed all checks, just about to apply the rule to the product
+            
+            //CUSTOM CODE
+            //Zoo Visitor fun, check for active subscriptions of parent member
+            
+            switch ($this->edition)
+    		{
+    			case 'aj':      
+                    
+                    $this->EE->load->add_package_path(PATH_THIRD.'zoo_visitor/');
+    				$this->EE->load->helper('zoo_visitor');
+                    $zoo_settings = get_zoo_settings($this->EE);
+    				$this->EE->load->remove_package_path(PATH_THIRD.'zoo_visitor/');
+                    
+                    $parent_company_field = $row['rule_custom']['parent_company_field'];
+                    $this->EE->db->select('entry_id')
+                            ->from('channel_titles')
+                            ->where('channel_titles.channel_id', $zoo_settings['member_channel_id'])
+                            ->where('channel_titles.author_id', $member_id);
+    		        $q = $this->EE->db->get();
+                    if ($q->num_rows()==0) break;
+                    
+                    $zoo_entry_id = $q->row('entry_id');
+                    
+                    $parent_company_q = $this->EE->db->select('parent_id')
+                            ->from('relationships')
+                            ->where('child_id', $zoo_entry_id)
+                            ->where('field_id', $parent_company_field)
+                            ->get();
+                            
+                    if ($parent_company_q->num_rows()==0) break;
+                    
+                    $parent_company = $parent_company_q->row('parent_id');
+                    
+                    $parent_group_q = $this->EE->db->select('group_id')
+                        ->from('members')
+                        ->join('channel_titles', 'channel_titles.author_id=members.member_id', 'left')
+                        ->where('entry_id', $parent_company)
+                        ->get();
+                        
+                    if ($parent_group_q->num_rows()==0) break;
+                    
+                    if (!in_array($parent_group_q->row('group_id'), $row['rule_custom']['parent_company_member_groups']))
+                    {
+                        continue 2;
+                    }
+          
+                    break;
+                
+                default:
+                    break;      
+            }
+            
+            //CUSTOM CODE END
+			
+			
+			//and check if it's not too big...
+			if ($row['commission_aplied_maxamount']>0)
+			{
+				if ($purchases_total>=$row['commission_aplied_maxamount'])
+				{
+					unset($rules[$id]);
+					continue 2; //this rule cannot be applied anymore, go no next one
+				}
+				$purchases_total += $paid_for_product;
+				if ($purchases_total>=$row['commission_aplied_maxamount'])
+				{
+					$paid_for_product -= $purchases_total - $row['commission_aplied_maxamount'];
+				}
+			}
+			
+			//so looks like all is fine? calculate the commission
+			
+			//echo 'looks like all is fine';
+			
+			$rules_used[] = $row['rule_id'];
+			
+			switch ($row['commission_type'])
+			{
+				case 'credit':
+					$commission_amount += $row['commission_rate'];
+					break;			
+				case 'percent':
+				default:
+					$commission_amount += $paid_for_product*$row['commission_rate']/100;
+					break;
+			}
+			
+			
+			//if the rule it terminator, do not process other rules
+			if ($row['rule_terminator']=='y')
+			{
+				break;
+			}
+
+			
+				
+		}
+
+		if ($commission_amount==0) return false;
+		
+		
+		//ok, time to add the commission record!
+		$insert = array(
+			'order_id'			=> $subscription_id,
+			'method'			=> 'membrr',
+			'rules_used'		=> serialize($rules_used),
+			'member_id'			=> $referrer_data['referrer_id'],
+			'hit_id'			=> $referrer_data['hit_id'],
+			'referral_id'		=> $member_id,
+			'credits'			=> $commission_amount,
+			'record_date'		=> $this->EE->localize->now
+		);
+		$this->EE->db->insert('affiliate_commissions', $insert);
+		
+		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
+		{
+			$credits_action_q = $this->EE->db->select('action_id, enabled')
+									->from('exp_credits_actions')
+									->where('action_name', 'affiliate_plus_reward')
+									->get();
+			if ($credits_action_q->num_rows()>0 && $credits_action_q->row('enabled')==1)
+	    	{
+				$pData = array(
+					'action_id'			=> $credits_action_q->row('action_id'),
+					'site_id'			=> $this->EE->config->item('site_id'),
+					'credits'			=> $commission_amount,
+					'receiver'			=> $referrer_data['referrer_id'],
+					'item_id'			=> $referrer_data['hit_id'],
+					'item_parent_id' 	=> $member_id
+				);
+				
+				$this->EE->affiliate_plus_lib->_save_credits($pData);
+			}
+		}
+    
+    }
+
+
+
+
+
+
+
+
     
     
     

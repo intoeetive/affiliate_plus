@@ -73,6 +73,8 @@ class Affiliate_plus_upd {
 			'rule_product_ids'					=> array('type' => 'TEXT',		'default' => ''),
 			'rule_product_groups'				=> array('type' => 'TEXT',		'default' => ''),
 			'rule_product_by_custom_field'		=> array('type' => 'TEXT',		'default' => ''),
+            
+            'rule_custom'		=> array('type' => 'TEXT',		'default' => ''),
 									
 			'commission_type'					=> array('type' => 'ENUM',		'constraint'=> "'percent','credit'",	'default' => 'percent'),
 			'commission_rate'					=> array('type' => 'DECIMAL',	'constraint' => '7,2', 'default' => 0),
@@ -228,6 +230,14 @@ class Affiliate_plus_upd {
 			if ($this->EE->db->field_exists('discount_processing', 'affiliate_commissions') == FALSE)
 			{
 				$this->EE->dbforge->add_column('affiliate_commissions', array('rules_used' => array('type' => 'TEXT',		'default' => '') ) );
+			}
+        }
+        
+        if ($current < 0.20)
+        {
+			if ($this->EE->db->field_exists('rule_custom', 'affiliate_rules') == FALSE)
+			{
+				$this->EE->dbforge->add_column('affiliate_rules', array('rule_custom' => array('type' => 'TEXT',		'default' => '') ) );
 			}
         }
 		

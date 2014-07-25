@@ -415,6 +415,21 @@ Log in to your Control Panel to process the payout.
 'hit_date' =>
 'Hit date',
 
+'membrr' =>
+'Membrr',
+
+'subscription_for' =>
+"Subscription for",
+
+'parent_company_member_groups' =>
+'Parent company member groups',
+
+'parent_company_field' =>
+'Parent company field',
+
+'custom_rules' =>
+"Custom rules",
+
 /* END */
 ''=>''
 );

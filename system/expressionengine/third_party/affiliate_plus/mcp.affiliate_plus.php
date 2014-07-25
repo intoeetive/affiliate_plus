@@ -34,6 +34,8 @@ class Affiliate_plus_mcp {
     
     var $multiselect_fetch_limit = 50;
     
+    var $edition        = 'aj';//'normal'
+    
     function __construct() { 
         // Make a local reference to the ExpressionEngine super object 
         $this->EE =& get_instance(); 
@@ -170,6 +172,8 @@ class Affiliate_plus_mcp {
 			'rule_participant_member_groups'=> array(),
 			'rule_participant_member_categories'=> array(),
 			'rule_participant_by_profile_field'	=> '',
+            
+            'rule_custom'	=> array(),
 			
 			'rule_product_ids'=> array(),
 			'rule_product_groups'=> array(),
@@ -342,6 +346,31 @@ class Affiliate_plus_mcp {
 		        break;
 		        
 		    
+            case 'membrr':
+				
+				//get all plans
+                if (!class_exists('Membrr_EE')) {
+        			require(PATH_THIRD.'membrr/class.membrr_ee.php');
+        		}
+        		$this->membrr = new Membrr_EE;
+                $plans = $this->membrr->GetPlans();
+                if ($plans==false) show_error(lang('need_products_in_store'));
+		        
+		        $product_ids_list_items = array();
+    			$product_ids_list_items[''] = '';
+		        foreach ($plans as $plan)
+		        {
+		            $product_ids_list_items[$plan['id']] = $plan['name'];
+		        }
+		        
+	            $js .= "
+	            $('#rule_product_ids').multiselect({ droppable: 'none', sortable: 'none' });
+	            ";
+                
+		        break;
+		        
+            
+            
 			
 			case 'store':
 				$total_products = $this->EE->db->count_all('store_products');
@@ -546,15 +575,20 @@ class Affiliate_plus_mcp {
 		
 		$data['products'] = array();
 		$data['products']['show'] = (!empty($values['rule_product_ids']) || !empty($values['rule_product_groups']) || !empty($values['rule_product_by_custom_field']))?true:false;
-		$data['products']['rule_product_ids'] = form_multiselect('rule_product_ids[]', $product_ids_list_items, $values['rule_product_ids'], 'id="rule_product_ids"');
-		$data['products']['rule_product_groups'] = form_multiselect('rule_product_groups[]', $product_groups_list_items, $values['rule_product_groups'], 'id="rule_product_groups"');
-		$data['products']['rule_product_by_custom_field'] = form_dropdown('rule_product_by_custom_field', $product_field_list_items, $values['rule_product_by_custom_field']);
-		/*
-		foreach ($product_field_list_items as $id=>$title)
-		{
-			$data['product_custom_fields']['rule_product_by_custom_field'] .= form_label($title, 'rule_product_by_custom_field_'.$id).NBS.form_checkbox('rule_product_by_custom_field[]', $id, in_array($id, $values['rule_product_by_custom_field']), 'id="rule_product_by_custom_field_'.$id.'"').BR;
-		}*/
-		
+        if (isset($product_ids_list_items))
+        {
+		  $data['products']['rule_product_ids'] = form_multiselect('rule_product_ids[]', $product_ids_list_items, $values['rule_product_ids'], 'id="rule_product_ids"');
+        }
+        if (isset($product_groups_list_items))
+        {
+		  $data['products']['rule_product_groups'] = form_multiselect('rule_product_groups[]', $product_groups_list_items, $values['rule_product_groups'], 'id="rule_product_groups"');
+        }
+        if (isset($product_field_list_items))
+        {
+		  $data['products']['rule_product_by_custom_field'] = form_dropdown('rule_product_by_custom_field', $product_field_list_items, $values['rule_product_by_custom_field']);
+        }
+        
+
 		$data['members'] = array();
 		$data['members']['show'] = (!empty($values['rule_participant_members']) || !empty($values['rule_participant_member_groups']) || !empty($values['rule_participant_by_profile_field']) || !empty($values['rule_participant_member_categories']))?true:false;
 		$data['members']['rule_participant_members'] = form_multiselect('rule_participant_members[]', $members_list_items, $values['rule_participant_members'], 'id="rule_participant_members"');
@@ -583,6 +617,43 @@ class Affiliate_plus_mcp {
 	            $('#rule_participant_member_categories').multiselect({ droppable: 'none', sortable: 'none' });
 	        ";
         }
+        
+        switch ($this->edition)
+		{
+			case 'aj':
+                $data['custom_rules'] = array();
+                $parent_company_member_groups = (isset($values['rule_custom']['parent_company_member_groups']))?$values['rule_custom']['parent_company_member_groups']:array();
+                $data['custom_rules']['parent_company_member_groups'] = form_multiselect('rule_custom[parent_company_member_groups][]', $member_groups_list_items, $parent_company_member_groups, 'id="parent_company_member_groups"');
+                $js .= "
+    	            $('#parent_company_member_groups').multiselect({ droppable: 'none', sortable: 'none' });
+    	        ";
+                
+                $this->EE->load->add_package_path(PATH_THIRD.'zoo_visitor/');
+				$this->EE->load->helper('zoo_visitor');
+                $zoo_settings = get_zoo_settings($this->EE);
+				$this->EE->load->remove_package_path(PATH_THIRD.'zoo_visitor/');
+            
+                $zoo_visitor_fields = array();
+    			$zoo_visitor_fields[''] = '';
+    			$this->EE->db->select('field_id, field_label');
+    			$this->EE->db->from('channels');
+		        $this->EE->db->join('channel_fields', 'channels.field_group=channel_fields.group_id', 'left');
+		        $this->EE->db->where('channel_id', $zoo_settings['member_channel_id']);
+		        $q = $this->EE->db->get();
+		        foreach ($q->result_array() as $row)
+		        {
+		            $zoo_visitor_fields[$row['field_id']] = $row['field_label'];
+		        }
+            
+    			$data['custom_rules']['show'] = true;
+                $parent_company_field = (isset($values['rule_custom']['parent_company_field']))?$values['rule_custom']['parent_company_field']:'';
+    			$data['custom_rules']['parent_company_field'] = form_dropdown('rule_custom[parent_company_field]', $zoo_visitor_fields, $parent_company_field, 'id="parent_company_field"');
+              
+                break;
+                
+            default:
+                break;
+		}
         
         $js .= '
 				var draft_target = "";
@@ -893,7 +964,9 @@ class Affiliate_plus_mcp {
     
     function _balance($member_id)
     {
-    	//correct the amount, if needed
+    	$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
+        
+        //correct the amount, if needed
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
 					->where('member_id', $member_id)
@@ -904,7 +977,7 @@ class Affiliate_plus_mcp {
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
+		if (isset($ext_settings['devdemon_credits']) && $ext_settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
@@ -925,7 +998,9 @@ class Affiliate_plus_mcp {
     
     function _correct_withdraw_amount($member_id, $requested_amount)
     {
-    	//correct the amount, if needed
+    	$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
+        
+        //correct the amount, if needed
 		$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('affiliate_commissions')
 					->where('member_id', $member_id)
@@ -936,7 +1011,7 @@ class Affiliate_plus_mcp {
 			$amount_avail = $q->row('credits_total');
 		}
 
-		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
+		if (isset($ext_settings['devdemon_credits']) && $ext_settings['devdemon_credits']=='y')
 		{
 			$q = $this->EE->db->select('SUM(credits) as credits_total')
 					->from('credits')
@@ -964,7 +1039,7 @@ class Affiliate_plus_mcp {
     
     function _record_payout($commission_id, $member_id, $credits, $method, $transaction_id, $comment='')
     {
-    	
+    	$ext_settings = $this->EE->affiliate_plus_lib->_get_ext_settings();
 		
 		$insert = array(
 			'method'			=> $method,
@@ -985,7 +1060,7 @@ class Affiliate_plus_mcp {
   		$this->EE->db->update('affiliate_commissions', $data);
   		
   		
-  		if (isset($this->settings['devdemon_credits']) && $this->settings['devdemon_credits']=='y')
+  		if (isset($ext_settings['devdemon_credits']) && $ext_settings['devdemon_credits']=='y')
 		{
 			$credits_action_q = $this->EE->db->select('action_id, enabled')
 									->from('exp_credits_actions')
@@ -1351,6 +1426,15 @@ class Affiliate_plus_mcp {
 					->join('members AS referrers', 'affiliate_commissions.member_id=referrers.member_id', 'left')
 					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left');
         		break;
+                
+            case 'membrr':
+        		$this->EE->db->select('affiliate_commissions.*, referrers.screen_name AS referrer_screen_name, referrals.screen_name AS referral_screen_name, plan_name')
+        			->from('affiliate_commissions')
+					->join('members AS referrers', 'affiliate_commissions.member_id=referrers.member_id', 'left')
+					->join('members AS referrals', 'affiliate_commissions.referral_id=referrals.member_id', 'left')
+                    ->join('membrr_subscriptions', 'affiliate_commissions.order_id=membrr_subscriptions.recurring_id', 'left')
+                    ->join('membrr_plans', 'membrr_plans.plan_id=membrr_subscriptions.plan_id', 'left');
+        		break;
 
 			case 'cartthrob':
         	default:
@@ -1422,6 +1506,9 @@ class Affiliate_plus_mcp {
 	        		break;
 	        	case 'store':
 	        		$vars['data'][$i]['order'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=store'.AMP.'method=orders'.AMP.'order_id='.$row['order_id']."\">".lang('order').NBS.$row['order_id']."</a>";   
+	        		break;
+                case 'membrr'://since Membrr does not provide interface to view a payment, we link to subscription instead
+	        		$vars['data'][$i]['order'] = "<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=membrr'.AMP.'method=subscription'.AMP.'id='.$row['order_id']."\">".lang('subscription_for').NBS.$row['plan_name']."</a>";   
 	        		break;
         		case 'cartthrob':
         		default:
@@ -1683,7 +1770,8 @@ class Affiliate_plus_mcp {
 			'cartthrob'			=>	lang('cartthrob'),
 			//'brilliantretail'	=>	lang('brilliantretail'),
 			'simplecommerce'	=>	lang('simplecommerce'),
-			'store'				=>	lang('store')
+			'store'				=>	lang('store'),
+            'membrr'            =>  lang('membrr')
 		);
     	
  

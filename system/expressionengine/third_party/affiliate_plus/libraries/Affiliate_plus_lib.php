@@ -88,11 +88,30 @@ class Affiliate_plus_lib {
 	
 	
 	
-	function get_referrer_data()
+	function get_referrer_data($member_id = false)
 	{
 		$referrer_data = false;
 		
-		if ($this->EE->session->userdata('member_id')!=0)
+		if ($member_id!=false)
+        {
+            $q = $this->EE->db->select('hit_id, hit_date, referrer_id')
+	    				->from('affiliate_hits')
+	    				->where('member_id', $member_id)
+						->order_by('hit_id', 'asc')
+						->limit(1)
+						->get();
+			if ($q->num_rows()>0)
+			{
+				if ($q->row('referrer_id')!=0)
+				{
+					//using record from database
+					return $q->row_array();
+				}
+			}
+            return false;//falback
+        }
+        else 
+        if ($this->EE->session->userdata('member_id')!=0)
     	{
     		$q = $this->EE->db->select('hit_id, hit_date, referrer_id')
 	    				->from('affiliate_hits')
