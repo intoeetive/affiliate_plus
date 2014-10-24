@@ -34,7 +34,7 @@ class Affiliate_plus_ext {
     
     var $settings 		= array();
     var $site_id		= 1;
-    var $edition        = 'aj';//'normal'
+    var $edition        = 'normal';//'aj'
     
 	/**
 	 * Constructor
@@ -1484,10 +1484,11 @@ class Affiliate_plus_ext {
 				$field = 'field_id_'.$cartthrob_config['orders_total_field'];
 				$q = $this->EE->db->select("SUM($field) AS prev_purchases_total")
 						->from('channel_data')
+                        ->join('channel_titles', 'channel_data.entry_id=channel_titles.entry_id', 'left')
 						->where('author_id', $this->EE->session->userdata('member_id'))
-						->where_in('channel_id', $cartthrob_config['product_channels'])
-						->where('status', $cartthrob_config['orders_default_status'])
-						->where('entry_id != ', $order_data['order_id'])
+						->where_in('channel_data.channel_id', $cartthrob_config['product_channels'])
+						->where('channel_titles.status', $cartthrob_config['orders_default_status'])
+						->where('channel_data.entry_id != ', $order_data['order_id'])
 						->get();
 				$purchases_total = 0;
 				if ($q->num_rows() > 0)

@@ -34,7 +34,7 @@ class Affiliate_plus_mcp {
     
     var $multiselect_fetch_limit = 50;
     
-    var $edition        = 'aj';//'normal'
+    var $edition        = 'normal';//'aj'
     
     function __construct() { 
         // Make a local reference to the ExpressionEngine super object 

@@ -38,6 +38,16 @@ class Affiliate_plus_upd {
         $this->EE->lang->loadfile('affiliate_plus');  
 		
 		$this->EE->load->dbforge(); 
+        
+        //----------------------------------------
+		// EXP_MODULES
+		// The settings column, Ellislab should have put this one in long ago.
+		// No need for a seperate preferences table for each module.
+		//----------------------------------------
+		if ($this->EE->db->field_exists('settings', 'modules') == FALSE)
+		{
+			$this->EE->dbforge->add_column('modules', array('settings' => array('type' => 'TEXT') ) );
+		}
 
         $data = array( 'module_name' => 'Affiliate_plus' , 'module_version' => $this->version, 'has_cp_backend' => 'y', 'has_publish_fields' => 'n'); 
         $this->EE->db->insert('modules', $data); 
