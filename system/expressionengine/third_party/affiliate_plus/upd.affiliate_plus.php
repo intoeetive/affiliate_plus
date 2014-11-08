@@ -237,7 +237,7 @@ class Affiliate_plus_upd {
         
         if ($current < 0.06)
         {
-			if ($this->EE->db->field_exists('discount_processing', 'affiliate_commissions') == FALSE)
+			if ($this->EE->db->field_exists('rules_used', 'affiliate_commissions') == FALSE)
 			{
 				$this->EE->dbforge->add_column('affiliate_commissions', array('rules_used' => array('type' => 'TEXT',		'default' => '') ) );
 			}

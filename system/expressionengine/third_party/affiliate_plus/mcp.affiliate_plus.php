@@ -753,7 +753,7 @@ class Affiliate_plus_mcp {
 		$i = 0;
         foreach ($query->result_array() as $row)
         {
-           	$vars['data'][$i]['date'] = ($row['record_date']!='')?$this->EE->localize->decode_date($date_format, $row['record_date']):'';
+           	$vars['data'][$i]['date'] = ($row['record_date']!='')?$this->EE->localize->format_date($date_format, $row['record_date']):'';
            	$vars['data'][$i]['member'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['screen_name']."</a> (".lang('balance')." ".$this->_balance($row['member_id'])." - <a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats'.AMP.'member_id='.$row['member_id']."\">".lang('view_stats')."</a>)";
            	$vars['data'][$i]['amount'] = ($row['credits']!=0)?(-$row['credits']):(-$row['credits_pending']);
            	switch ($row['order_id'])
@@ -1219,7 +1219,7 @@ class Affiliate_plus_mcp {
        	$row = $q->row_array();
     	
     	$vars['data'] = array(
-			'date_processed'	=> 	$this->EE->localize->decode_date($date_format, $row['payout_date']),
+			'date_processed'	=> 	$this->EE->localize->format_date($date_format, $row['payout_date']),
 			'member'			=>	"<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['screen_name']."</a> (<a href=\"".BASE.AMP.'C=addons_modules'.AMP.'M=show_module_cp'.AMP.'module=affiliate_plus'.AMP.'method=stats'.AMP.'stats_type=member'.AMP.'id='.$row['member_id']."\">".lang('view_stats')."</a>)",
 			'amount'			=> $row['amount'],
 			'method'			=> lang($row['method']),
@@ -1497,7 +1497,7 @@ class Affiliate_plus_mcp {
 		$i = 0;
         foreach ($query->result_array() as $row)
         {
-           $vars['data'][$i]['date'] = $this->EE->localize->decode_date($date_format, $row['record_date']);
+           $vars['data'][$i]['date'] = $this->EE->localize->format_date($date_format, $row['record_date']);
            $vars['data'][$i]['affiliate'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['member_id']."\">".$row['referrer_screen_name']."</a>";   
            switch ($ext_settings['ecommerce_solution'])
 	        {
@@ -1653,7 +1653,7 @@ class Affiliate_plus_mcp {
         {
            	$vars['data'][$i]['affiliate'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['affiliate_member_id']."\">".$row['affiliate_screen_name']."</a>";   
 			$vars['data'][$i]['referral'] = "<a href=\"".BASE.AMP.'C=myaccount'.AMP.'id='.$row['referral_member_id']."\">".$row['referral_screen_name']."</a>";    
-			$vars['data'][$i]['date'] = $this->EE->localize->decode_date($date_format, $row['hit_date']);
+			$vars['data'][$i]['date'] = $this->EE->localize->format_date($date_format, $row['hit_date']);
            	$i++;	
         }
         

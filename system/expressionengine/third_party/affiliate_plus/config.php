@@ -3,7 +3,7 @@
 if ( ! defined('AFFILIATE_PLUS_ADDON_NAME'))
 {
 	define('AFFILIATE_PLUS_ADDON_NAME',         'Affiliate Plus');
-	define('AFFILIATE_PLUS_ADDON_VERSION',      '0.2.1');
+	define('AFFILIATE_PLUS_ADDON_VERSION',      '0.3.0');
 }
 
 $config['name']=AFFILIATE_PLUS_ADDON_NAME;
