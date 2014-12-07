@@ -1226,7 +1226,7 @@ class Affiliate_plus_ext {
 				$arr = unserialize($row['rule_gateways']);
 				if (!empty($arr))
 				{
-					if (!in_array($order['payment_method'], $arr))
+					if (!in_array($order->payment_method, $arr))
 					{
 						continue;
 					}
@@ -1326,7 +1326,7 @@ class Affiliate_plus_ext {
 							$paid_for_product -= $divided_discount;
 							break;
 						case 'dividebyqty':
-							$divided_discount = ($order_discount / $order['order_qty']);
+							$divided_discount = ($order_discount / $order->order_qty);
 							$paid_for_product -= $divided_discount;
 							break;
 						case 'firstitem':
