@@ -430,6 +430,9 @@ Log in to your Control Panel to process the payout.
 'custom_rules' =>
 "Custom rules",
 
+'withdraw' =>
+"Withdraw",
+
 /* END */
 ''=>''
 );

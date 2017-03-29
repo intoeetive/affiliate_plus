@@ -42,7 +42,7 @@ class Affiliate_plus_mcp {
         
         $this->EE->load->library('affiliate_plus_lib');
         
-        if ($this->EE->config->item('app_version')>=260)
+        if (version_compare(APP_VER, '2.6.0', '>='))
         {
         	$this->EE->view->cp_page_title = lang('affiliate_plus_module_name');
         }
@@ -433,7 +433,7 @@ class Affiliate_plus_mcp {
 		        {
 		            $product_ids_list_items[$row['entry_id']] = $row['title'];
 		        }       
-				
+				/*
 				$this->EE->load->add_package_path(PATH_THIRD.'store/');
 				$this->EE->load->model('store_payments_model');
 				$payment_methods = $this->EE->store_payments_model->find_all_payment_methods();
@@ -443,6 +443,12 @@ class Affiliate_plus_mcp {
 				foreach ($payment_methods as $payment_method)
 				{
 					$gateways_list[$payment_method['name']] = $payment_method['title'];
+				}*/
+                $this->factory = new \Omnipay\Common\GatewayFactory;
+                $payment_methods = $this->factory->find();
+                foreach ($payment_methods as $payment_method)
+				{
+					$gateways_list[$payment_method] = $payment_method;
 				}
 		        
 		        break;
@@ -1356,7 +1362,7 @@ class Affiliate_plus_mcp {
     
     function _string_to_timestamp($human_string, $localized = TRUE)
     {
-        if ($this->EE->config->item('app_version')<260)
+        if (version_compare(APP_VER, '2.6.0', '<'))
         {
             return $this->EE->localize->convert_human_date_to_gmt($human_string, $localized);
         }

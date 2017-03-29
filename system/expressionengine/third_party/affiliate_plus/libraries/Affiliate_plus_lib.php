@@ -121,7 +121,7 @@ class Affiliate_plus_lib {
 						->get();
 			if ($q->num_rows()>0)
 			{
-				if ($q->row('referrer_id')!=0)
+				if ($q->row('referrer_id')!=0 && $q->row('referrer_id')!=NULL)
 				{
 					//using record from database
 					return $q->row_array();

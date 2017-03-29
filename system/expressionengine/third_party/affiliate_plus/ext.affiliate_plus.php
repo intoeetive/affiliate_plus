@@ -1991,7 +1991,8 @@ class Affiliate_plus_ext {
 				$arr = unserialize($row['rule_gateways']);
 				if (!empty($arr))
 				{
-					if (!in_array($order_data['payment_gateway'], $arr))
+					$gateway_prefixed_name = 'Cartthrob_' . $order_data['payment_gateway'];
+                    if (!in_array($order_data['payment_gateway'], $arr) && !in_array($gateway_prefixed_name, $arr))
 					{
 						continue;
 					}

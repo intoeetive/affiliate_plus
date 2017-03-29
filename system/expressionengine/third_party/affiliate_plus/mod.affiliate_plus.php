@@ -546,7 +546,15 @@ class Affiliate_plus {
 		if (preg_match("#^P(\d+)|/P(\d+)#", $query_string, $match))
 		{
 			$start = (isset($match[2])) ? $match[2] : $match[1];
-			$basepath = $this->EE->functions->remove_double_slashes(str_replace($match[0], '', $basepath));
+            if (version_compare(APP_VER, '2.6.0', '<'))
+			{
+				$basepath = $this->EE->functions->remove_double_slashes(str_replace($match[0], '', $basepath));
+			}
+			else
+			{
+				$this->EE->load->helper('string');
+                $basepath = reduce_double_slashes(str_replace($match[0], '', $basepath));
+			}
 		}
 
     	$vars = array();
@@ -660,7 +668,15 @@ class Affiliate_plus {
 		if (preg_match("#^P(\d+)|/P(\d+)#", $query_string, $match))
 		{
 			$start = (isset($match[2])) ? $match[2] : $match[1];
-			$basepath = $this->EE->functions->remove_double_slashes(str_replace($match[0], '', $basepath));
+            if (version_compare(APP_VER, '2.6.0', '<'))
+			{
+				$basepath = $this->EE->functions->remove_double_slashes(str_replace($match[0], '', $basepath));
+			}
+			else
+			{
+				$this->EE->load->helper('string');
+                $basepath = reduce_double_slashes(str_replace($match[0], '', $basepath));
+			}
 		}
 
     	$vars = array();
@@ -774,10 +790,10 @@ class Affiliate_plus {
     
     function _process_pagination($total, $perpage, $start, $basepath='', $out='', $paginate='bottom', $paginate_tagdata='')
     {
-        if ($this->EE->config->item('app_version') >= 240)
+        if (version_compare(APP_VER, '2.4.0', '>='))
 		{
 	        $this->EE->load->library('pagination');
-	        if ($this->EE->config->item('app_version') >= 260)
+	        if (version_compare(APP_VER, '2.6.0', '>='))
 	        {
 	        	$pagination = $this->EE->pagination->create(__CLASS__);
 	        }
@@ -785,7 +801,7 @@ class Affiliate_plus {
 	        {
 	        	$pagination = new Pagination_object(__CLASS__);
 	        }
-            if ($this->EE->config->item('app_version') >= 280)
+            if (version_compare(APP_VER, '2.8.0', '>='))
             {
                 $this->EE->TMPL->tagdata = $pagination->prepare($this->EE->TMPL->tagdata);
                 $pagination->build($total, $perpage);
